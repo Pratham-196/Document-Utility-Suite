@@ -1,0 +1,1189 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Advanced PDF Editor - Document Utility Suite App{% endblock %}
+
+{% block extra_css %}
+<!-- Fabric.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<!-- Preview CSS for Standard Upload Section -->
+<link rel="stylesheet" href="/static/css/preview.css">
+
+<style>
+    /* ========= Metric-Compatible Font Faces ========= */
+    /* Carlito = Calibri metric match */
+    @font-face { font-family: 'Carlito'; src: url('/static/fonts/Carlito-Regular.ttf'); font-weight: normal; font-style: normal; }
+    @font-face { font-family: 'Carlito'; src: url('/static/fonts/Carlito-Bold.ttf'); font-weight: bold; font-style: normal; }
+    @font-face { font-family: 'Carlito'; src: url('/static/fonts/Carlito-Italic.ttf'); font-weight: normal; font-style: italic; }
+    @font-face { font-family: 'Carlito'; src: url('/static/fonts/Carlito-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+    /* Arimo = Arial / Helvetica metric match */
+    @font-face { font-family: 'Arimo'; src: url('/static/fonts/Arimo-Regular.ttf'); font-weight: normal; font-style: normal; }
+    @font-face { font-family: 'Arimo'; src: url('/static/fonts/Arimo-Bold.ttf'); font-weight: bold; font-style: normal; }
+    @font-face { font-family: 'Arimo'; src: url('/static/fonts/Arimo-Italic.ttf'); font-weight: normal; font-style: italic; }
+    @font-face { font-family: 'Arimo'; src: url('/static/fonts/Arimo-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+    /* Tinos = Times New Roman metric match */
+    @font-face { font-family: 'Tinos'; src: url('/static/fonts/Tinos-Regular.ttf'); font-weight: normal; font-style: normal; }
+    @font-face { font-family: 'Tinos'; src: url('/static/fonts/Tinos-Bold.ttf'); font-weight: bold; font-style: normal; }
+    @font-face { font-family: 'Tinos'; src: url('/static/fonts/Tinos-Italic.ttf'); font-weight: normal; font-style: italic; }
+    @font-face { font-family: 'Tinos'; src: url('/static/fonts/Tinos-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+    /* Cousine = Courier New metric match */
+    @font-face { font-family: 'Cousine'; src: url('/static/fonts/Cousine-Regular.ttf'); font-weight: normal; font-style: normal; }
+    @font-face { font-family: 'Cousine'; src: url('/static/fonts/Cousine-Bold.ttf'); font-weight: bold; font-style: normal; }
+    @font-face { font-family: 'Cousine'; src: url('/static/fonts/Cousine-Italic.ttf'); font-weight: normal; font-style: italic; }
+    @font-face { font-family: 'Cousine'; src: url('/static/fonts/Cousine-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+    /* Caladea = Cambria metric match */
+    @font-face { font-family: 'Caladea'; src: url('/static/fonts/Caladea-Regular.ttf'); font-weight: normal; font-style: normal; }
+    @font-face { font-family: 'Caladea'; src: url('/static/fonts/Caladea-Bold.ttf'); font-weight: bold; font-style: normal; }
+    @font-face { font-family: 'Caladea'; src: url('/static/fonts/Caladea-Italic.ttf'); font-weight: normal; font-style: italic; }
+    @font-face { font-family: 'Caladea'; src: url('/static/fonts/Caladea-BoldItalic.ttf'); font-weight: bold; font-style: italic; }
+
+    /* Editor Styles */
+    :root {
+        --sidebar-width: 70px;
+        --top-height: 60px;
+        --accent-pink: #db2777;
+    }
+
+    /* Editor App Container - Hidden initially */
+    #editorApp {
+        display: none;
+        position: fixed;
+        top: 74px;
+        /* Height of Navbar approx */
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--bg-subtle);
+        z-index: 50;
+        /* Below Navbar (1000) */
+        overflow: hidden;
+    }
+
+    .editor-layout {
+        display: grid;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        grid-template-rows: var(--top-height) auto 1fr;
+        height: 100%;
+        background: var(--bg-subtle);
+        overflow: hidden;
+    }
+
+    /* Top Bar */
+    .editor-header {
+        grid-column: 1 / -1;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        padding: 0 1.5rem;
+        justify-content: space-between;
+        z-index: 20;
+    }
+
+    .doc-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Sidebar */
+    .editor-sidebar {
+        grid-row: 2 / -1;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem 0;
+        gap: 0.75rem;
+        z-index: 15;
+    }
+
+    .side-tool {
+        width: 45px;
+        height: 45px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+        font-size: 1.1rem;
+        background: none;
+    }
+
+    .side-tool:hover {
+        background: var(--surface-hover);
+        color: var(--primary);
+    }
+
+    .side-tool.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        border-color: var(--primary-mid);
+    }
+
+    .side-tool.magic-active {
+        background: #fdf2f8;
+        color: var(--accent-pink);
+        border-color: #fbcfe8;
+    }
+
+    /* Property Bar (Sub-header) */
+    .editor-properties {
+        grid-column: 2 / -1;
+        background: var(--surface);
+        height: 50px;
+        border-bottom: 1px solid var(--border);
+        display: none;
+        align-items: center;
+        padding: 0 1rem;
+        gap: 1.5rem;
+        z-index: 10;
+        box-shadow: var(--shadow-xs);
+    }
+
+    .prop-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-right: 1.5rem;
+        border-right: 1px solid var(--border);
+    }
+
+    .prop-group:last-child { border-right: none; }
+
+    .prop-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+        font-weight: 700;
+    }
+
+    .prop-input {
+        height: 32px;
+        border: 1px solid var(--border);
+        border-radius: 0.375rem;
+        padding: 0 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+        background: var(--surface);
+    }
+
+    .color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        padding: 0;
+        cursor: pointer;
+    }
+
+    /* Main Content */
+    .editor-viewport {
+        grid-column: 2 / -1;
+        grid-row: 3 / -1;
+        overflow: auto;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+        scroll-behavior: smooth;
+        background: var(--bg-subtle);
+    }
+
+    .page-container {
+        background: white;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        position: relative;
+    }
+
+    .loading-pulse {
+        width: 50px;
+        height: 50px;
+        background-color: var(--primary);
+        border-radius: 50%;
+        margin: 0 auto 1.5rem;
+        animation: pulse 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.8);
+            opacity: 0.4;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(0.8);
+            opacity: 0.4;
+        }
+    }
+
+    /* Floating Context Toolbar */
+    #floatingToolbar {
+        display: none;
+        position: fixed;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 0.35rem 0.5rem;
+        gap: 0.25rem;
+        align-items: center;
+        z-index: 200;
+        pointer-events: all;
+    }
+
+    .ft-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 0.375rem;
+        border: 1px solid transparent;
+        background: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        transition: all 0.15s;
+    }
+
+    .ft-btn:hover {
+        background: var(--surface-hover);
+        color: var(--primary);
+    }
+
+    .ft-btn.danger:hover {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    .ft-sep {
+        width: 1px;
+        height: 20px;
+        background: var(--border);
+        margin: 0 0.15rem;
+    }
+
+    /* Draw brush size control */
+    #drawProps {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Standard Upload Section -->
+<section class="section" id="uploadSection">
+    <div class="container">
+        <div class="tool-header">
+            <h1>PDF Editor</h1>
+            <p>Annotate, redact, and edit text blocks directly on your PDF.</p>
+        </div>
+
+        <div class="upload-area" id="dropZone">
+            <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+            <div class="upload-icon">
+                <i class="fa-solid fa-pen-nib"></i>
+            </div>
+            <h3>Select PDF file</h3>
+            <p>or drop PDF here</p>
+            <button type="button" class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
+                <i class="fa-solid fa-folder-open"></i>
+                Select PDF file
+            </button>
+        </div>
+
+        <div id="loader" style="display: none; margin-top: 2rem; text-align: center;">
+            <div class="loading-pulse"></div>
+            <p style="color: var(--text-tertiary); font-weight: 500;">Reading PDF layers...</p>
+        </div>
+    </div>
+</section>
+
+<!-- Full Screen Editor Application -->
+<div id="editorApp">
+    <div class="editor-layout">
+        <!-- Top Nav -->
+        <header class="editor-header">
+            <div class="doc-title" id="docTitle">
+                <i class="fa-solid fa-file-pdf" style="color: #ef4444; font-size: 1.5rem;"></i>
+                <span>Untitled PDF</span>
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-outline" onclick="location.reload()"
+                    style="padding: 0.5rem 1rem;">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEdits()" style="padding: 0.5rem 1.5rem;">
+                    Finish & Download <i class="fa-solid fa-download" style="margin-left: 0.5rem;"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar Tools -->
+        <aside class="editor-sidebar" id="toolSidebar">
+            <div class="side-tool active" id="btnCursor" onclick="setTool('cursor')" title="Select (V)">
+                <i class="fa-solid fa-arrow-pointer"></i>
+            </div>
+            <div class="side-tool" id="btnSmartEdit" onclick="toggleSmartEdit()" title="Smart Edit — double-click text to edit in place">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div style="height: 1px; width: 30px; background: #e2e8f0; margin: 0.5rem 0;"></div>
+            <div class="side-tool" id="btnText" onclick="setTool('text')" title="Add Text (T)">
+                <i class="fa-solid fa-font"></i>
+            </div>
+            <div class="side-tool" id="btnWhiteout" onclick="setTool('whiteout')" title="Whiteout (E)">
+                <i class="fa-solid fa-eraser"></i>
+            </div>
+            <div style="height: 1px; width: 30px; background: #e2e8f0; margin: 0.5rem 0;"></div>
+            <div class="side-tool" onclick="addShape('rect')" title="Rectangle">
+                <i class="fa-regular fa-square"></i>
+            </div>
+            <div class="side-tool" onclick="addShape('circle')" title="Circle">
+                <i class="fa-regular fa-circle"></i>
+            </div>
+            <div class="side-tool" onclick="addShape('line')" title="Line">
+                <i class="fa-solid fa-minus"></i>
+            </div>
+            <div class="side-tool" onclick="document.getElementById('imgUpload').click()" title="Add Image">
+                <i class="fa-regular fa-image"></i>
+            </div>
+            <input type="file" id="imgUpload" accept="image/*" style="display: none;">
+            <div style="height: 1px; width: 30px; background: #e2e8f0; margin: 0.5rem 0;"></div>
+            <div class="side-tool" id="btnDraw" onclick="setTool('draw')" title="Free Draw (D)">
+                <i class="fa-solid fa-pen"></i>
+            </div>
+            <div class="side-tool" id="btnHighlight" onclick="setTool('highlight')" title="Highlight (H)">
+                <i class="fa-solid fa-highlighter"></i>
+            </div>
+        </aside>
+
+        <!-- Context Property Bar -->
+        <section class="editor-properties" id="propertyBar">
+            <!-- Object Specific Properties -->
+            <div id="objectProperties" style="display: none; height: 100%; align-items: center;">
+                <!-- Text Group -->
+                <div id="textProps" class="prop-group" style="display: none;">
+                    <span class="prop-label">Font</span>
+                    <select id="fontFamily" class="prop-input" style="width: 140px;"
+                        onchange="updateObjectProp('fontFamily', this.value)">
+                        <optgroup label="Metric-Compatible (Matches PDF Fonts)">
+                            <option value="Carlito">Carlito (≈ Calibri)</option>
+                            <option value="Caladea">Caladea (≈ Cambria)</option>
+                            <option value="Arimo">Arimo (≈ Arial)</option>
+                            <option value="Tinos">Tinos (≈ Times New Roman)</option>
+                            <option value="Cousine">Cousine (≈ Courier New)</option>
+                        </optgroup>
+                        <optgroup label="Google Fonts">
+                            <option value="Roboto">Roboto</option>
+                            <option value="Lato">Lato</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="Montserrat">Montserrat</option>
+                        </optgroup>
+                        <optgroup label="Sans-Serif">
+                            <option value="Arial">Arial</option>
+                            <option value="Helvetica">Helvetica</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Tahoma">Tahoma</option>
+                            <option value="Trebuchet MS">Trebuchet MS</option>
+                        </optgroup>
+                        <optgroup label="Serif">
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Garamond">Garamond</option>
+                        </optgroup>
+                        <optgroup label="Monospace">
+                            <option value="Courier New">Courier New</option>
+                            <option value="Lucida Console">Lucida Console</option>
+                            <option value="Monaco">Monaco</option>
+                        </optgroup>
+                    </select>
+                    <input type="number" id="fontSize" class="prop-input" style="width: 60px;"
+                        onchange="updateObjectProp('fontSize', parseInt(this.value))">
+                    <div style="display: flex; gap: 2px; margin-left: 0.5rem;">
+                        <button class="side-tool" style="width: 32px; height: 32px; font-size: 0.8rem;"
+                            onclick="toggleStyle('fontWeight', 'bold')"><i class="fa-solid fa-bold"></i></button>
+                        <button class="side-tool" style="width: 32px; height: 32px; font-size: 0.8rem;"
+                            onclick="toggleStyle('fontStyle', 'italic')"><i class="fa-solid fa-italic"></i></button>
+                    </div>
+                </div>
+
+                <!-- Color Group -->
+                <div class="prop-group">
+                    <span class="prop-label">Fill</span>
+                    <input type="color" id="fillColor" class="color-swatch" oninput="updateObjectProp('fill', this.value)">
+                </div>
+
+                <!-- Arrange Group -->
+                <div class="prop-group">
+                    <span class="prop-label">Arrange</span>
+                    <button class="side-tool" style="width: 32px; height: 32px;" onclick="bringForward()"
+                        title="Bring to Front"><i class="fa-solid fa-layer-group"></i></button>
+                    <button class="side-tool" style="width: 32px; height: 32px; color: #ef4444;" onclick="deleteSelected()"
+                        title="Delete"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+
+                <!-- Draw Brush Size (shown only in draw mode) -->
+                <div id="drawProps" class="prop-group">
+                    <span class="prop-label">Brush</span>
+                    <input type="range" id="brushSize" min="1" max="30" value="4" style="width:80px;"
+                        oninput="updateBrushSize(this.value)">
+                    <span id="brushSizeVal" style="font-size:0.8rem;min-width:24px;">4px</span>
+                    <input type="color" id="brushColor" class="color-swatch" value="#000000"
+                        oninput="updateBrushColor(this.value)">
+                </div>
+            </div>
+
+            <!-- Global Controls -->
+            <div id="globalControls" style="display: flex; height: 100%; align-items: center; margin-left: auto;">
+                <!-- Zoom Group -->
+                <div class="prop-group">
+                    <span class="prop-label">Zoom</span>
+                    <button class="side-tool" style="width: 32px; height: 32px;" onclick="changeZoom(-0.1)"
+                        title="Zoom Out">
+                        <i class="fa-solid fa-minus"></i>
+                    </button>
+                    <span id="zoomLevel"
+                        style="font-size: 0.875rem; font-weight: 600; min-width: 45px; text-align: center;">100%</span>
+                    <button class="side-tool" style="width: 32px; height: 32px;" onclick="changeZoom(0.1)" title="Zoom In">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                    <button class="side-tool"
+                        style="width: 32px; height: 32px; margin-left: 0.5rem; font-size: 0.75rem; font-weight: bold;"
+                        onclick="setZoom(1.0)" title="100% Zoom">
+                        100%
+                    </button>
+                    <button class="side-tool" style="width: 32px; height: 32px; margin-left: 0.5rem;" onclick="fitToWidth()"
+                        title="Fit to Width">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                </div>
+
+                <!-- Undo/Redo Group -->
+                <div class="prop-group" style="padding-right: 0; border-right: none;">
+                    <span class="prop-label">History</span>
+                    <!-- FIX: BUG 6 — Undo/Redo Operates on Wrong Page -->
+                    <button class="side-tool" style="width: 32px; height: 32px;" title="Undo (Ctrl+Z)"
+                        onclick="undo(lastActiveCanvasIndex)">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                    <button class="side-tool" style="width: 32px; height: 32px;" title="Redo (Ctrl+Y)"
+                        onclick="redo(lastActiveCanvasIndex)">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Floating Context Toolbar -->
+        <div id="floatingToolbar" style="display:none; position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:0.5rem; box-shadow:0 4px 12px rgba(0,0,0,0.15); padding:0.35rem 0.5rem; gap:0.25rem; align-items:center; z-index:200;">
+            <button class="ft-btn" id="ftBold" title="Bold" onclick="toggleStyle('fontWeight','bold')"><i class="fa-solid fa-bold"></i></button>
+            <button class="ft-btn" id="ftItalic" title="Italic" onclick="toggleStyle('fontStyle','italic')"><i class="fa-solid fa-italic"></i></button>
+            <div class="ft-sep"></div>
+            <input type="color" id="ftColor" class="color-swatch" style="width:24px;height:24px;" title="Color" oninput="updateObjectProp('fill', this.value)">
+            <input type="number" id="ftFontSize" class="prop-input" style="width:52px;height:28px;font-size:0.8rem;" title="Font size" onchange="updateObjectProp('fontSize', parseInt(this.value))">
+            <div class="ft-sep"></div>
+            <button class="ft-btn" title="Bring to Front" onclick="bringForward()"><i class="fa-solid fa-layer-group"></i></button>
+            <button class="ft-btn danger" title="Delete" onclick="deleteSelected()"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+
+        <!-- Canvas Workspace -->
+        <main class="editor-viewport" id="canvasContainer">
+            <!-- Pages injected here -->
+        </main>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadSection = document.getElementById('uploadSection');
+    const editorApp = document.getElementById('editorApp');
+    const loader = document.getElementById('loader');
+    const canvasContainer = document.getElementById('canvasContainer');
+    const sidebar = document.getElementById('toolSidebar');
+    const propertyBar = document.getElementById('propertyBar');
+    const textProps = document.getElementById('textProps');
+    const docTitle = document.querySelector('#docTitle span');
+
+    let currentFilename = '';
+    let canvases = [];
+    let currentTool = 'cursor';
+    let activeCanvas = null;
+    let smartEditEnabled = false;
+    let currentZoom = 1.0;
+    let canvasBaseDimensions = []; // Store original dimensions [ {w, h}, ... ]
+    let undoStacks = []; // Per-canvas undo history
+    let redoStacks = [];
+    // Maps raw PDF font name → { family: loadedCSSName, data: base64, ext: string }
+    const pdfFontRegistry = {};
+    const floatingToolbar = document.getElementById('floatingToolbar');
+
+    // FIX: BUG 1 — Undo/Redo Infinite Loop
+    let isLoadingState = false;
+    // FIX: BUG 6 — Undo/Redo Operates on Wrong Page
+    let lastActiveCanvasIndex = 0;
+
+    function saveState(canvas, index) {
+        // FIX: BUG 1 — Undo/Redo Infinite Loop
+        if (isLoadingState) return;
+        // FIX: BUG 4 — Smart Edit Custom Properties Stripped on Undo
+        undoStacks[index].push(JSON.stringify(canvas.toJSON(['isGhost','originalText','originalStyle','originalOrigin','originalPDFFont','isWhiteout','isHighlight','embeddedFontData','embeddedFontExt'])));
+        redoStacks[index] = [];
+    }
+
+    function undo(index) {
+        const canvas = canvases[index];
+        if (!undoStacks[index] || undoStacks[index].length === 0) return;
+        redoStacks[index].push(JSON.stringify(canvas.toJSON(['isGhost','originalText','originalStyle','originalOrigin','originalPDFFont','isWhiteout','isHighlight','embeddedFontData','embeddedFontExt'])));
+        const state = undoStacks[index].pop();
+        // FIX: BUG 1 — Undo/Redo Infinite Loop
+        isLoadingState = true;
+        canvas.loadFromJSON(state, () => {
+            canvas.requestRenderAll();
+            isLoadingState = false;
+        });
+    }
+
+    function redo(index) {
+        const canvas = canvases[index];
+        if (!redoStacks[index] || redoStacks[index].length === 0) return;
+        undoStacks[index].push(JSON.stringify(canvas.toJSON(['isGhost','originalText','originalStyle','originalOrigin','originalPDFFont','isWhiteout','isHighlight','embeddedFontData','embeddedFontExt'])));
+        const state = redoStacks[index].pop();
+        isLoadingState = true;
+        canvas.loadFromJSON(state, () => {
+            canvas.requestRenderAll();
+            isLoadingState = false;
+        });
+    }
+
+    // Hotkeys
+    window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'v') setTool('cursor');
+        if (e.key === 't') setTool('text');
+        if (e.key === 'e') setTool('whiteout');
+        if (e.key === 'd') setTool('draw');
+        if (e.key === 'h') setTool('highlight');
+        if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            // FIX: BUG 6 — Undo/Redo Operates on Wrong Page
+            undo(lastActiveCanvasIndex);
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+            e.preventDefault();
+            redo(lastActiveCanvasIndex);
+        }
+    });
+
+    // Tool switching
+    function setTool(tool) {
+        currentTool = tool;
+        document.querySelectorAll('.side-tool').forEach(btn => btn.classList.remove('active'));
+        if (tool === 'cursor') document.getElementById('btnCursor').classList.add('active');
+        if (tool === 'text') document.getElementById('btnText').classList.add('active');
+        if (tool === 'whiteout') document.getElementById('btnWhiteout').classList.add('active');
+        if (tool === 'draw') document.getElementById('btnDraw').classList.add('active');
+        if (tool === 'highlight') document.getElementById('btnHighlight').classList.add('active');
+
+        // Show/hide draw props
+        document.getElementById('drawProps').style.display = (tool === 'draw') ? 'flex' : 'none';
+
+        canvases.forEach(canvas => {
+            // Free draw mode
+            canvas.isDrawingMode = (tool === 'draw');
+            if (tool === 'draw') {
+                canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+                canvas.freeDrawingBrush.width = parseInt(document.getElementById('brushSize').value) || 4;
+                canvas.freeDrawingBrush.color = document.getElementById('brushColor').value || '#000000';
+            }
+
+            canvas.selection = (tool === 'cursor');
+            canvas.defaultCursor = (tool === 'cursor') ? 'default' : 'crosshair';
+            canvas.forEachObject(obj => {
+                if (obj.isGhost) {
+                    obj.selectable = smartEditEnabled && (tool === 'cursor');
+                    obj.evented = smartEditEnabled && (tool === 'cursor');
+                } else {
+                    obj.selectable = (tool === 'cursor');
+                    obj.evented = (tool === 'cursor');
+                }
+            });
+            canvas.requestRenderAll();
+        });
+    }
+
+    function updateBrushSize(val) {
+        document.getElementById('brushSizeVal').textContent = val + 'px';
+        canvases.forEach(c => { if (c.freeDrawingBrush) c.freeDrawingBrush.width = parseInt(val); });
+    }
+
+    function updateBrushColor(val) {
+        canvases.forEach(c => { if (c.freeDrawingBrush) c.freeDrawingBrush.color = val; });
+    }
+
+    function toggleSmartEdit() {
+        smartEditEnabled = !smartEditEnabled;
+        const btn = document.getElementById('btnSmartEdit');
+        btn.classList.toggle('magic-active', smartEditEnabled);
+        setTool(currentTool);
+    }
+
+    // Property updates
+    function updateObjectProp(prop, value) {
+        if (!activeCanvas) return;
+        const activeObj = activeCanvas.getActiveObject();
+        if (!activeObj) return;
+
+        if (prop === 'fontFamily') {
+            const fontInfo = mapPDFFont(value);
+            if (fontInfo.url) {
+                loadFont(fontInfo.url);
+                document.fonts.load(`12px "${fontInfo.family}"`).then(() => {
+                    activeObj.set('fontFamily', fontInfo.family);
+                    activeCanvas.requestRenderAll();
+                });
+            } else {
+                activeObj.set('fontFamily', fontInfo.family);
+            }
+        } else {
+            activeObj.set(prop, value);
+        }
+        activeCanvas.requestRenderAll();
+    }
+
+    function toggleStyle(prop, value) {
+        if (!activeCanvas) return;
+        const activeObj = activeCanvas.getActiveObject();
+        if (!activeObj || !activeObj.isType('i-text')) return;
+        const current = activeObj.get(prop);
+        activeObj.set(prop, current === value ? 'normal' : value);
+        activeCanvas.requestRenderAll();
+    }
+
+    function deleteSelected() {
+        if (!activeCanvas) return;
+        const activeObj = activeCanvas.getActiveObject();
+        if (activeObj) {
+            activeCanvas.remove(activeObj);
+            // FIX: BUG 5 — Deleting Objects Destroys Global Zoom UI
+            document.getElementById('objectProperties').style.display = 'none';
+        }
+    }
+
+    function bringForward() {
+        if (!activeCanvas) return;
+        const activeObj = activeCanvas.getActiveObject();
+        if (activeObj) activeObj.bringToFront();
+    }
+
+    // Zoom Logic
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (editorApp.style.display === 'block') fitToWidth();
+        }, 250);
+    });
+
+    function changeZoom(delta) {
+        setZoom(currentZoom + delta);
+    }
+
+    function setZoom(level) {
+        currentZoom = Math.min(Math.max(0.1, level), 3.0);
+        document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+
+        canvases.forEach((canvas, i) => {
+            const base = canvasBaseDimensions[i];
+            canvas.setZoom(currentZoom);
+            canvas.setDimensions({
+                width: base.width * currentZoom,
+                height: base.height * currentZoom
+            });
+        });
+    }
+
+    function fitToWidth() {
+        if (canvases.length === 0) return;
+        const viewportWidth = canvasContainer.clientWidth - 80; // Subtract padding
+        const baseWidth = canvasBaseDimensions[0].width;
+        const level = viewportWidth / baseWidth;
+        setZoom(level);
+    }
+
+    // File Handling
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+    async function handleFile(file) {
+        if (file.type !== 'application/pdf') return;
+
+        // UI Transition
+        dropZone.style.display = 'none';
+        loader.style.display = 'block';
+
+        docTitle.textContent = file.name;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+            const uploadData = await uploadRes.json();
+            if (uploadData.error) throw new Error(uploadData.error);
+            currentFilename = uploadData.filename;
+            const infoRes = await fetch(`/api/pdf-info/${currentFilename}`);
+            const infoData = await infoRes.json();
+
+            // Switch to Editor Mode FIRST so dimensions are measurable
+            uploadSection.style.display = 'none';
+            editorApp.style.display = 'block';
+
+            await initEditor(infoData.total_pages);
+        } catch (err) {
+            alert("Error: " + err.message);
+            location.reload();
+        }
+    }
+
+    function loadImage(url) { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = url; }); }
+
+    async function initEditor(totalPages) {
+        canvases = [];
+        canvasBaseDimensions = [];
+        canvasContainer.innerHTML = ''; // Clear previous
+
+        for (let i = 1; i <= totalPages; i++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-container';
+            const canvasEl = document.createElement('canvas');
+            canvasEl.id = `canvas-${i - 1}`;
+            wrapper.appendChild(canvasEl);
+            canvasContainer.appendChild(wrapper);
+
+            const imgUrl = `/api/pdf-page/${currentFilename}/${i}`;
+            const img = await loadImage(imgUrl);
+
+            canvasBaseDimensions.push({ width: img.width, height: img.height });
+
+            undoStacks.push([]);
+            redoStacks.push([]);
+
+            const fCanvas = new fabric.Canvas(`canvas-${i - 1}`, {
+                width: img.width,
+                height: img.height
+            });
+
+            const bgImg = new fabric.Image(img, { selectable: false, evented: false });
+            fCanvas.setBackgroundImage(bgImg, fCanvas.renderAll.bind(fCanvas));
+
+            await loadTextBlocks(fCanvas, i);
+
+            // FIX: BUG 2 — Memory Leak: Duplicate Event Listeners in Smart Edit
+            fCanvas._saveStateHandler = () => saveState(fCanvas, i - 1);
+            fCanvas.on('object:added', fCanvas._saveStateHandler);
+            fCanvas.on('object:modified', fCanvas._saveStateHandler);
+            fCanvas.on('object:removed', fCanvas._saveStateHandler);
+
+            fCanvas.on('selection:created', (e) => onObjectSelected(fCanvas, e.selected[0]));
+            fCanvas.on('selection:updated', (e) => onObjectSelected(fCanvas, e.selected[0]));
+            fCanvas.on('selection:cleared', () => {
+                // FIX: BUG 5 — Deleting Objects Destroys Global Zoom UI
+                document.getElementById('objectProperties').style.display = 'none';
+                textProps.style.display = 'none';
+                floatingToolbar.style.display = 'none';
+            });
+
+            fCanvas.on('mouse:dblclick', (opt) => {
+                const activeObj = fCanvas.getActiveObject();
+                if (activeObj && activeObj.isGhost) {
+                    triggerSmartEdit(fCanvas, activeObj);
+                    return;
+                }
+            });
+
+            fCanvas.on('mouse:down', function(opt) {
+                // FIX: BUG 6 — Undo/Redo Operates on Wrong Page
+                lastActiveCanvasIndex = canvases.indexOf(this);
+                const activeObj = this.getActiveObject();
+                if (activeObj && activeObj.isGhost) return; // wait for dblclick
+                if (currentTool === 'cursor' || currentTool === 'draw') return;
+                const pointer = this.getPointer(opt.e);
+                addObjectAt(this, pointer);
+            });
+            canvases.push(fCanvas);
+        }
+
+        // Always show property bar in editor mode to hold the zoom controls
+        propertyBar.style.display = 'flex';
+
+        // Initial fit
+        fitToWidth();
+    }
+
+    async function loadTextBlocks(canvas, pageNum) {
+        try {
+            // Load embedded PDF fonts first so smart-edit text renders correctly
+            const fontRes = await fetch(`/api/pdf-fonts/${currentFilename}/${pageNum}`);
+            const fontData = await fontRes.json();
+            if (fontData.fonts && fontData.fonts.length) {
+                await Promise.all(fontData.fonts.map(async (f) => {
+                    try {
+                        const mimeMap = { 'ttf': 'truetype', 'otf': 'opentype', 'woff': 'woff', 'woff2': 'woff2', 'type1': 'truetype' };
+                        const mime = mimeMap[f.ext] || 'truetype';
+                        const fontFace = new FontFace(f.name, `url(data:font/${mime};base64,${f.data})`);
+                        const loaded = await fontFace.load();
+                        document.fonts.add(loaded);
+                        // Register: map raw PDF font name to the loaded CSS family + raw data
+                        // Also register under cleaned names (strip ABCDEF+ prefix, lowercase)
+                        const cleanName = f.name.replace(/^[A-Z]{6}\+/, '').toLowerCase();
+                        pdfFontRegistry[f.name.toLowerCase()] = { family: f.name, data: f.data, ext: f.ext };
+                        pdfFontRegistry[cleanName] = { family: f.name, data: f.data, ext: f.ext };
+                    } catch (e) { /* ignore individual font errors */ }
+                }));
+            }
+
+            const res = await fetch(`/api/pdf-text-blocks/${currentFilename}/${pageNum}`);
+            const data = await res.json();
+            const scale = 1.5;
+            data.blocks.forEach(block => {
+                const [x0, y0, x1, y1] = block.bbox;
+                const pdfFontKey = (block.raw_font || block.font || '').toLowerCase().replace(/^[A-Z]{6}\+/, '').trim();
+                const embeddedFont = pdfFontRegistry[pdfFontKey] || pdfFontRegistry[(block.raw_font || '').toLowerCase()];
+
+                const ghost = new fabric.Rect({
+                    left: x0 * scale, top: y0 * scale,
+                    width: (x1 - x0) * scale, height: (y1 - y0) * scale,
+                    fill: 'rgba(59, 130, 246, 0.05)', stroke: 'transparent',
+                    selectable: false, evented: false, isGhost: true,
+                    originalText: block.text,
+                    originalStyle: { 
+                        size: block.size, 
+                        color: block.color, 
+                        font: block.font,
+                        rawFont: block.raw_font,
+                        flags: block.flags 
+                    },
+                    embeddedFontData: embeddedFont ? embeddedFont.data : null,
+                    embeddedFontExt: embeddedFont ? embeddedFont.ext : 'ttf',
+                    originalOrigin: block.origin
+                });
+                canvas.add(ghost);
+            });
+        } catch (err) { console.error("Error loading text blocks:", err); }
+    }
+
+    // FIX: BUG 3 — Fatal Text Loss on Font Load Failure
+    function createEditableText(canvas, ghost, fontInfo, scaledFontSize, rawFontName) {
+        const embeddedFontData = ghost.embeddedFontData || (pdfFontRegistry[(ghost.originalStyle.rawFont || '').toLowerCase()] || {}).data || null;
+        const embeddedFontExt = ghost.embeddedFontExt || (pdfFontRegistry[(ghost.originalStyle.rawFont || '').toLowerCase()] || {}).ext || 'ttf';
+
+        const text = new fabric.IText(ghost.originalText, {
+            left: ghost.left,
+            top: ghost.top,
+            fontSize: scaledFontSize,
+            fill: ghost.originalStyle.color || '#000000',
+            fontFamily: fontInfo.family,
+            fontWeight: fontInfo.weight,
+            fontStyle: fontInfo.style,
+            selectable: true,
+            evented: true,
+            opacity: 1,
+            backgroundColor: 'transparent',
+            textBackgroundColor: 'transparent',
+            originalPDFFont: ghost.originalStyle.rawFont || rawFontName,
+            originalOrigin: ghost.originalOrigin,
+            _originalFontSize: scaledFontSize,
+            _originalFontFamily: fontInfo.family,
+            embeddedFontData: embeddedFontData,
+            embeddedFontExt: embeddedFontExt
+        });
+
+        // FIX: BUG 2 — Memory Leak: Duplicate Event Listeners in Smart Edit
+        canvas.off('object:added', canvas._saveStateHandler);
+        canvas.off('object:modified', canvas._saveStateHandler);
+        canvas.off('object:removed', canvas._saveStateHandler);
+
+        canvas.add(text);
+        
+        // Re-attach undo listener
+        canvas.on('object:added', canvas._saveStateHandler);
+        canvas.on('object:modified', canvas._saveStateHandler);
+        canvas.on('object:removed', canvas._saveStateHandler);
+
+        canvas.setActiveObject(text);
+        canvas.requestRenderAll();
+        text.enterEditing();
+
+        // Update font picker to reflect the detected font
+        const sel = document.getElementById('fontFamily');
+        if ([...sel.options].some(o => o.value === fontInfo.family)) {
+            sel.value = fontInfo.family;
+        }
+        document.getElementById('fontSize').value = Math.round(scaledFontSize);
+        document.getElementById('textProps').style.display = 'flex';
+    }
+
+    function triggerSmartEdit(canvas, ghost) {
+        // --- Step 1: Detect specific style from flags ---
+        const flags = ghost.originalStyle.flags || 0;
+        const isItalic = (flags & 16) !== 0; // bit 4
+        const isBold = (flags & 32) !== 0;   // bit 5
+
+        const rawFontName = ghost.originalStyle.font || '';
+        const fontInfo = mapPDFFont(rawFontName, flags);
+        const scaledFontSize = ghost.originalStyle.size * 1.5;
+
+        // --- Step 2: Immediate UI Feedback ---
+        const whiteout = new fabric.Rect({
+            left: ghost.left - 1,
+            top: ghost.top - 1,
+            width: ghost.width + 2,
+            height: ghost.height + 2,
+            fill: '#FFFFFF', stroke: null, strokeWidth: 0,
+            selectable: false, evented: false, opacity: 1,
+            isWhiteout: true
+        });
+
+        canvas.remove(ghost);
+        canvas.add(whiteout);
+        canvas.requestRenderAll();
+        setTool('cursor');
+
+        // --- Step 3: Dynamic Font Loading & Text Injection ---
+        if (fontInfo.url) {
+            loadFont(fontInfo.url);
+        }
+
+        // Wait for font to load before creating the text object
+        document.fonts.load(`${fontInfo.weight} ${fontInfo.style} ${scaledFontSize}px "${fontInfo.family}"`).then(() => {
+            createEditableText(canvas, ghost, fontInfo, scaledFontSize, rawFontName);
+        }).catch(err => {
+            console.error("Font load failed, falling back:", err);
+            // FIX: BUG 3 — Fatal Text Loss on Font Load Failure
+            fontInfo.family = 'Helvetica'; // Safe fallback
+            fontInfo.url = null;
+            createEditableText(canvas, ghost, fontInfo, scaledFontSize, rawFontName);
+        });
+    }
+
+    function loadFont(fontUrl) {
+        if (!fontUrl) return;
+        if (!document.querySelector(`link[href="${fontUrl}"]`)) {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = fontUrl;
+            document.head.appendChild(link);
+            console.log("Dynamically loaded font:", fontUrl);
+        }
+    }
+
+    function mapPDFFont(name, flags = 0) {
+        if (!name) return { family: 'Arimo', weight: 'normal', style: 'normal', url: null };
+
+        let family = 'Arimo';
+        let weight = (flags & 32) ? 'bold' : 'normal';
+        let style = (flags & 16) ? 'italic' : 'normal';
+        let url = null;
+
+        const normalized = name.toLowerCase().trim();
+
+        // High-fidelity Google Fonts mapping
+        const fontMap = {
+            "times":     { family: "Tinos", url: "https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700" },
+            "arial":     { family: "Arimo", url: "https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;0,700;1,400;1,700" },
+            "helv":      { family: "Arimo", url: "https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;0,700;1,400;1,700" },
+            "cour":      { family: "Cousine", url: "https://fonts.googleapis.com/css2?family=Cousine:ital,wght@0,400;0,700;1,400;1,700" },
+            "geo":       { family: "Lora", url: "https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400;1,700" },
+            "lora":      { family: "Lora", url: "https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400;1,700" },
+            "calib":     { family: "Carlito", url: null },
+            "carlito":   { family: "Carlito", url: null },
+            "roboto":    { family: "Roboto", url: "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700" },
+            "montserrat":{ family: "Montserrat", url: "https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;1,400;1,700" },
+            "lato":      { family: "Lato", url: "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700" },
+            "open sans": { family: "Open Sans", url: "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700" },
+            "verdana":   { family: "Arimo", url: null },
+            "cambria":   { family: "Caladea", url: null },
+        };
+
+        // First, try PDF embedded registry entry (preferred when exact font embedded).
+        const trimmed = normalized.replace(/^[a-z]{6}\+/, '').trim();
+        if (pdfFontRegistry[normalized] || pdfFontRegistry[trimmed]) {
+            const entry = pdfFontRegistry[normalized] || pdfFontRegistry[trimmed];
+            family = entry.family;
+            url = null;
+            return { family, weight, style, url };
+        }
+
+        // Check for style suffixes if flags aren't set (sometimes flags are 0 in poorly generated PDFs)
+        if (weight === 'normal' && normalized.includes('bold')) weight = 'bold';
+        if (style === 'normal' && (normalized.includes('italic') || normalized.includes('oblique'))) style = 'italic';
+
+        const fontMapExtended = {
+            ...fontMap,
+            "times new roman": { family: "Tinos", url: "https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700" },
+            "timesnewroman": { family: "Tinos", url: "https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700" }
+        };
+
+        for (const [key, info] of Object.entries(fontMapExtended)) {
+            if (normalized.includes(key)) {
+                family = info.family;
+                url = info.url;
+                break;
+            }
+        }
+
+        return { family, weight, style, url };
+    }
+
+    function onObjectSelected(canvas, obj) {
+        activeCanvas = canvas;
+        // FIX: BUG 5 — Deleting Objects Destroys Global Zoom UI
+        document.getElementById('objectProperties').style.display = 'flex';
+        const isText = obj && obj.isType('i-text');
+        textProps.style.display = isText ? 'flex' : 'none';
+        if (obj && obj.fill && typeof obj.fill === 'string' && obj.fill.startsWith('#')) {
+            document.getElementById('fillColor').value = obj.fill;
+        }
+        if (isText) {
+            // Use stored original values so selecting doesn't appear to change font
+            document.getElementById('fontSize').value = Math.round(obj.get('fontSize'));
+            const ff = obj.get('fontFamily');
+            const sel = document.getElementById('fontFamily');
+            // Only set if the option exists, otherwise leave as-is
+            if ([...sel.options].some(o => o.value === ff)) sel.value = ff;
+        }
+
+        // Show floating toolbar near the selected object
+        showFloatingToolbar(canvas, obj, isText);
+    }
+
+    function showFloatingToolbar(canvas, obj, isText) {
+        if (!obj) { floatingToolbar.style.display = 'none'; return; }
+        const canvasEl = canvas.getElement();
+        const rect = canvasEl.getBoundingClientRect();
+        const objBounds = obj.getBoundingRect();
+
+        const x = rect.left + objBounds.left;
+        const y = rect.top + objBounds.top - 48;
+
+        floatingToolbar.style.display = 'flex';
+        floatingToolbar.style.left = Math.max(8, x) + 'px';
+        floatingToolbar.style.top = Math.max(8, y) + 'px';
+
+        const textBtns = [document.getElementById('ftBold'), document.getElementById('ftItalic'), document.getElementById('ftFontSize')];
+        textBtns.forEach(b => b.style.display = isText ? 'flex' : 'none');
+        if (isText) {
+            document.getElementById('ftFontSize').value = Math.round(obj.get('fontSize'));
+            document.getElementById('ftColor').value = (obj.fill && obj.fill.startsWith('#')) ? obj.fill : '#000000';
+        } else if (obj.fill && typeof obj.fill === 'string' && obj.fill.startsWith('#')) {
+            document.getElementById('ftColor').value = obj.fill;
+        }
+    }
+
+    function addObjectAt(canvas, pointer) {
+        let obj;
+        if (currentTool === 'whiteout') {
+            obj = new fabric.Rect({
+                left: pointer.x, top: pointer.y, fill: '#FFFFFF', stroke: null, width: 100, height: 20
+            });
+        } else if (currentTool === 'text') {
+            obj = new fabric.IText('New Text', {
+                left: pointer.x, top: pointer.y, fontFamily: 'Arimo', fontSize: 24, fill: '#000000'
+            });
+        } else if (currentTool === 'highlight') {
+            obj = new fabric.Rect({
+                left: pointer.x, top: pointer.y, fill: 'rgba(255, 235, 59, 0.4)',
+                stroke: null, width: 120, height: 20,
+                selectable: true, evented: true, isHighlight: true
+            });
+        }
+        if (obj) { canvas.add(obj).setActiveObject(obj); setTool('cursor'); }
+    }
+
+    function addShape(type) {
+        if (canvases.length === 0) return;
+        const canvas = activeCanvas || canvases[0];
+        let obj;
+        if (type === 'rect') obj = new fabric.Rect({ width: 100, height: 100, fill: '#3b82f6', left: 100, top: 100 });
+        if (type === 'circle') obj = new fabric.Circle({ radius: 50, fill: '#3b82f6', left: 100, top: 100 });
+        if (type === 'line') obj = new fabric.Line([0, 0, 200, 0], { stroke: '#3b82f6', strokeWidth: 5, left: 100, top: 100 });
+        canvas.add(obj).setActiveObject(obj);
+        setTool('cursor');
+    }
+
+    document.getElementById('imgUpload').onchange = function (e) {
+        if (!e.target.files.length || !canvases.length) return;
+        const reader = new FileReader();
+        reader.onload = f => {
+            fabric.Image.fromURL(f.target.result, img => {
+                img.scaleToWidth(200);
+                (activeCanvas || canvases[0]).add(img).setActiveObject(img);
+                setTool('cursor');
+            });
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    };
+
+    async function saveEdits() {
+        const editsData = {};
+        canvases.forEach((canvas, index) => {
+            const objects = canvas.getObjects().filter(o => !o.isGhost);
+            if (objects.length) {
+                const base = canvasBaseDimensions[index];
+                // Fabric stores object coordinates in base canvas space (not zoomed viewport space).
+                // Do NOT divide by currentZoom — that would make positions wrong when zoomed.
+                const serialized = objects.map(o => {
+                    const obj = o.toObject(['originalPDFFont', 'originalOrigin', 'isWhiteout', 'isHighlight', 'embeddedFontData', 'embeddedFontExt']);
+                    return obj;
+                });
+                editsData[index] = {
+                    width: base.width,
+                    height: base.height,
+                    objects: serialized
+                };
+            }
+        });
+        if (!Object.keys(editsData).length) return alert("Please make some edits or annotations first.");
+        const saveBtn = document.querySelector('.btn.btn-primary[onclick="saveEdits()"]');
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
+        try {
+            const res = await fetch('/api/save-edits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: currentFilename, edits: editsData })
+            });
+            const data = await res.json();
+            if (data.download_url) {
+                window.location.href = data.download_url;
+            } else {
+                throw new Error(data.error || "Save failed");
+            }
+        } catch (err) {
+            alert("Error saving: " + err.message);
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = 'Finish & Download <i class="fa-solid fa-download" style="margin-left:0.5rem"></i>'; }
+        }
+    }
+</script>
+{% endblock %}

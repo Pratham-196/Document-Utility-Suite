@@ -1,0 +1,458 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Remove Background - Document Utility Suite{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Remove Background</h1>
+            <p>Automatically remove the background from your images with AI precision.</p>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="mode-selector" id="modeSelector">
+            <div class="mode-card active" id="modeAI" onclick="selectMode('ai')">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <div>
+                    <strong>AI Mode</strong>
+                    <p>Best for photos, people, products.</p>
+                </div>
+            </div>
+            <div class="mode-card" id="modeSimple" onclick="selectMode('simple')">
+                <i class="fa-solid fa-fill-drip"></i>
+                <div>
+                    <strong>Simple Mode</strong>
+                    <p>Best for diagrams, slides, screenshots. Removes solid/near-white backgrounds instantly.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tolerance slider (simple mode only) -->
+        <div id="toleranceRow" style="display:none; margin-bottom: 1.5rem;">
+            <label style="font-weight:600; color:var(--text-primary);">
+                Tolerance: <span id="toleranceVal">30</span>
+                <span style="font-size:0.8rem; color:var(--text-tertiary); margin-left:0.5rem;">(higher = removes more background)</span>
+            </label>
+            <input type="range" id="toleranceSlider" min="5" max="100" value="30"
+                style="width:100%; margin-top:0.5rem; accent-color:var(--primary);"
+                oninput="document.getElementById('toleranceVal').textContent=this.value">
+        </div>
+
+        <!-- Upload Area -->
+        <div class="upload-area" id="dropZone">
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            <div class="upload-icon">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <h3>Select Image</h3>
+            <p>Supports PNG, JPG, WEBP, AVIF, BMP, TIFF</p>
+            <button type="button" class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
+                <i class="fa-solid fa-folder-open"></i>
+                Select Image
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" style="display: none; margin-top: 2rem;">
+            <div class="loading-card">
+                <div class="loading-spinner"></div>
+                <h3>Removing background...</h3>
+                <p id="loadingMessage">Processing your image, this may take 5-15 seconds</p>
+                <div class="loading-tips">
+                    <p><i class="fa-solid fa-lightbulb"></i> <strong>Tip:</strong> Smaller images process faster. Large images are automatically optimized.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display: none; margin-top: 2rem;">
+            <div class="error-card">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <h3>Error</h3>
+                <p id="errorMessage"></p>
+                <button class="btn btn-primary" onclick="resetTool()">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+        <!-- Result State -->
+        <div id="resultState" style="display: none; margin-top: 2rem;">
+            <div class="result-header">
+                <h3><i class="fa-solid fa-check-circle"></i> Background Removed Successfully!</h3>
+                <div class="result-actions">
+                    <button class="btn btn-primary" onclick="downloadResult()">
+                        <i class="fa-solid fa-download"></i>
+                        Download PNG
+                    </button>
+                    <button class="btn btn-outline" onclick="resetTool()">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        Process Another
+                    </button>
+                </div>
+            </div>
+
+            <div class="comparison-container">
+                <div class="comparison-panel">
+                    <div class="panel-label">Original</div>
+                    <div class="image-container">
+                        <img id="originalImage" src="" alt="Original">
+                    </div>
+                </div>
+
+                <div class="comparison-divider">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+
+                <div class="comparison-panel">
+                    <div class="panel-label">Background Removed</div>
+                    <div class="image-container checkered-bg">
+                        <img id="resultImage" src="" alt="Result">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .loading-card {
+        background: var(--surface);
+        padding: 3rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        text-align: center;
+        border: 1px solid var(--border);
+    }
+
+    .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid var(--border-strong);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-card h3 { margin: 0 0 0.5rem; color: var(--text-primary); }
+    .loading-card p  { margin: 0; color: var(--text-secondary); }
+
+    .loading-tips {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: var(--surface-raised);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--radius-md);
+        text-align: left;
+    }
+
+    .loading-tips p { margin: 0; font-size: 0.9rem; color: var(--text-secondary); }
+    .loading-tips i { color: var(--primary); margin-right: 0.5rem; }
+
+    .error-card {
+        background: var(--surface);
+        padding: 3rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        text-align: center;
+        border: 2px solid rgba(239,68,68,0.3);
+    }
+
+    .error-card i  { font-size: 3rem; color: #ef4444; margin-bottom: 1rem; }
+    .error-card h3 { margin: 0 0 0.5rem; color: #ef4444; }
+    .error-card p  { margin: 0 0 1.5rem; color: var(--text-secondary); }
+
+    .result-header {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .result-header h3 { margin: 0; color: var(--success); display: flex; align-items: center; gap: 0.5rem; }
+    .result-actions   { display: flex; gap: 0.75rem; }
+
+    .comparison-container {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 1.5rem;
+        align-items: center;
+    }
+
+    @media (max-width: 968px) {
+        .comparison-container { grid-template-columns: 1fr; gap: 1rem; }
+        .comparison-divider   { transform: rotate(90deg); }
+    }
+
+    .comparison-panel {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+
+    .panel-label {
+        background: var(--primary);
+        color: white;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .image-container {
+        padding: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 300px;
+        background: var(--bg-subtle);
+    }
+
+    .image-container img {
+        max-width: 100%;
+        max-height: 500px;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .checkered-bg {
+        background-image:
+            linear-gradient(45deg, #ccc 25%, transparent 25%),
+            linear-gradient(-45deg, #ccc 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #ccc 75%),
+            linear-gradient(-45deg, transparent 75%, #ccc 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    }
+
+    .comparison-divider { font-size: 2rem; color: var(--primary); text-align: center; }
+
+    .mode-selector {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .mode-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.25rem;
+        border: 2px solid var(--border);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        background: var(--surface);
+        transition: border-color 0.2s, background 0.2s;
+    }
+
+    .mode-card:hover { border-color: var(--primary-mid); background: var(--surface-hover); }
+    .mode-card.active { border-color: var(--primary); background: var(--primary-light); }
+    .mode-card i { font-size: 1.5rem; color: var(--primary); margin-top: 2px; flex-shrink: 0; }
+    .mode-card strong { display: block; color: var(--text-primary); margin-bottom: 0.25rem; }
+    .mode-card p { margin: 0; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; }
+
+    @media (max-width: 600px) { .mode-selector { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const resultState = document.getElementById('resultState');
+    const errorMessage = document.getElementById('errorMessage');
+    const originalImage = document.getElementById('originalImage');
+    const resultImage = document.getElementById('resultImage');
+
+    let currentFile = null;
+    let resultBlob = null;
+    let currentMode = 'ai';
+
+    function selectMode(mode) {
+        currentMode = mode;
+        document.getElementById('modeAI').classList.toggle('active', mode === 'ai');
+        document.getElementById('modeSimple').classList.toggle('active', mode === 'simple');
+        document.getElementById('toleranceRow').style.display = mode === 'simple' ? 'block' : 'none';
+    }
+
+    // Drag and drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        // Validate file type
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/avif', 'image/bmp', 'image/tiff'];
+        if (!validTypes.includes(file.type)) {
+            showError('Please select a valid image file (PNG, JPG, WEBP, AVIF, BMP, or TIFF)');
+            return;
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            showError('File size must be less than 10MB');
+            return;
+        }
+
+        currentFile = file;
+
+        // Show original image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            originalImage.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        // Process the image
+        processImage(file);
+    }
+
+    async function processImage(file) {
+        // Hide all states
+        dropZone.style.display = 'none';
+        errorState.style.display = 'none';
+        resultState.style.display = 'none';
+
+        // Show loading
+        loadingState.style.display = 'block';
+        
+        // Start timer
+        const startTime = Date.now();
+        const timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('loadingMessage').textContent = 
+                `Processing your image... ${elapsed} seconds elapsed`;
+        }, 1000);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('mode', currentMode);
+            formData.append('tolerance', document.getElementById('toleranceSlider').value);
+
+            document.getElementById('loadingMessage').textContent =
+                currentMode === 'simple'
+                    ? 'Removing background (simple mode)...'
+                    : 'Processing with AI — this may take 5–15 seconds...';
+
+            const response = await fetch('/remove-background', {
+                method: 'POST',
+                body: formData
+            });
+
+            clearInterval(timerInterval);
+
+            if (!response.ok) {
+                // Try to parse error message
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to remove background');
+                } else {
+                    throw new Error('Failed to remove background. Please try again.');
+                }
+            }
+
+            // Get the result image as blob
+            resultBlob = await response.blob();
+
+            // Display result
+            const resultUrl = URL.createObjectURL(resultBlob);
+            resultImage.src = resultUrl;
+
+            // Show result state
+            loadingState.style.display = 'none';
+            resultState.style.display = 'block';
+            
+            // Show processing time
+            const totalTime = Math.floor((Date.now() - startTime) / 1000);
+            console.log(`Background removed in ${totalTime} seconds`);
+
+            // Add to history
+            if (typeof addToHistory === 'function') {
+                addToHistory(file.name, 'image');
+            }
+
+        } catch (error) {
+            clearInterval(timerInterval);
+            console.error('Error:', error);
+            showError(error.message || 'An unexpected error occurred. Please try again.');
+        }
+    }
+
+    function showError(message) {
+        dropZone.style.display = 'none';
+        loadingState.style.display = 'none';
+        resultState.style.display = 'none';
+
+        errorMessage.textContent = message;
+        errorState.style.display = 'block';
+    }
+
+    function downloadResult() {
+        if (!resultBlob) {
+            alert('No result to download');
+            return;
+        }
+
+        const url = URL.createObjectURL(resultBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `no_bg_${currentFile.name.replace(/\.[^/.]+$/, '')}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function resetTool() {
+        // Reset all states
+        dropZone.style.display = 'block';
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        resultState.style.display = 'none';
+
+        // Clear data
+        currentFile = null;
+        resultBlob = null;
+        fileInput.value = '';
+        originalImage.src = '';
+        resultImage.src = '';
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+﻿{% extends 'base.html' %}
+{% block title %}Error {{ code }} — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page" style="max-width:600px;text-align:center;padding:60px 20px">
+  <div style="font-size:4rem;margin-bottom:16px">{{ '🔍' if code == 404 else '⚠️' }}</div>
+  <h1 style="font-size:2rem;margin-bottom:12px">{{ code }}</h1>
+  <p style="color:var(--text-secondary);margin-bottom:28px">{{ message }}</p>
+  <a href="/" class="btn btn-primary">← Back to Home</a>
+</div>
+{% endblock %}

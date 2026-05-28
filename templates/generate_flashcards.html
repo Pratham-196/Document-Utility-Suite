@@ -1,0 +1,479 @@
+﻿{% extends 'base.html' %}
+{% block title %}AI Flashcard Generator - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<style>
+.scene {
+    width: 100%;
+    max-width: 600px;
+    height: 280px;
+    margin: 0 auto 1.5rem;
+    perspective: 1000px;
+}
+
+.card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border-radius: 1rem;
+}
+
+.card.is-flipped {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+}
+
+.card-face-front {
+    background: var(--primary);
+    color: white;
+}
+
+.card-face-back {
+    background: var(--surface-raised);
+    border: 2px solid var(--border);
+    transform: rotateY(180deg);
+    color: var(--text-primary);
+}
+
+.card-label {
+    position: absolute;
+    top: 1rem;
+    left: 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+}
+
+.card-content {
+    font-size: 1.2rem;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.6;
+}
+
+.card-hint {
+    position: absolute;
+    bottom: 1rem;
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+/* Ensure card-label and card-hint are readable on the white back face */
+.card-face-back .card-label { color: var(--primary); opacity: 1; }
+.card-face-back .card-hint  { color: #6b6b6b; opacity: 1; }
+
+.flashcard-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.progress-text {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 1rem;
+    min-width: 60px;
+    text-align: center;
+}
+
+.progress-bar-wrap {
+    width: 100%;
+    background: #e2e8f0;
+    border-radius: 9999px;
+    height: 6px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 9999px;
+    transition: width 0.4s ease;
+}
+
+.list-view { display: none; }
+.list-view.active { display: block; }
+
+.flashcard-list-item {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.flashcard-list-item .front {
+    font-weight: 600;
+    color: var(--primary);
+    border-right: 2px solid var(--border);
+    padding-right: 1rem;
+}
+
+.flashcard-list-item .back {
+    color: var(--text-secondary);
+    padding-left: 0.5rem;
+}
+
+@media (max-width: 600px) {
+    .flashcard-list-item { grid-template-columns: 1fr; }
+    .flashcard-list-item .front { border-right: none; border-bottom: 2px solid #e2e8f0; padding-right: 0; padding-bottom: 0.75rem; }
+    .flashcard-list-item .back { padding-left: 0; }
+}
+
+.num-cards-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.num-btn {
+    padding: 0.4rem 1rem;
+    border: 2px solid var(--border-strong);
+    border-radius: 9999px;
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.num-btn:hover { border-color: var(--primary); color: var(--primary); }
+.num-btn.active { background: var(--primary); color: white; border-color: transparent; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1><i class="fa-solid fa-layer-group"></i> AI Flashcard Generator</h1>
+            <p>Upload a document and let AI instantly create study flashcards from the key concepts.</p>
+        </div>
+
+        <!-- Upload Form -->
+        <div id="uploadSection">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="upload-area" id="dropZone">
+                    <input type="file" name="file" id="fileInput"
+                        accept=".pdf,.pptx,.docx,.xlsx,.xls,.txt,.md,.csv,.json,.html,.htm"
+                        style="display: none;">
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                    <h3>Select a document</h3>
+                    <p>PDF, Word, PowerPoint, Excel, TXT and more</p>
+                    <button type="button" class="btn btn-primary btn-lg" id="selectFileBtn">
+                        <i class="fa-solid fa-folder-open"></i> Select Document
+                    </button>
+                </div>
+
+                <div class="file-list" id="fileList"></div>
+
+                <div class="action-panel" id="actionPanel" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <p style="font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem;">How many flashcards?</p>
+                        <div class="num-cards-selector">
+                            <button type="button" class="num-btn" onclick="setNumCards(5, this)">5</button>
+                            <button type="button" class="num-btn active" onclick="setNumCards(10, this)">10</button>
+                            <button type="button" class="num-btn" onclick="setNumCards(15, this)">15</button>
+                            <button type="button" class="num-btn" onclick="setNumCards(20, this)">20</button>
+                        </div>
+                        <input type="hidden" id="numCards" value="10">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Flashcards
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="preview-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Analyzing document and creating flashcards...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="errorSection" style="display: none; margin-top: 1.5rem;">
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.75rem; padding: 1.25rem; color: #dc2626; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fa-solid fa-circle-exclamation" style="font-size: 1.25rem;"></i>
+                <span id="errorText"></span>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultSection" style="display: none; margin-top: 2rem;">
+            <div class="preview-section">
+                <div class="preview-header">
+                    <h3><i class="fa-solid fa-layer-group"></i> Your Flashcards</h3>
+                    <div class="preview-actions">
+                        <button class="btn btn-outline btn-sm" onclick="toggleView()" id="viewToggleBtn">
+                            <i class="fa-solid fa-list"></i> List View
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="resetForm()">
+                            <i class="fa-solid fa-plus"></i> New
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card View -->
+                <div id="cardView">
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+                    </div>
+
+                    <div class="scene">
+                        <div class="card" id="flashcard" onclick="flipCard()">
+                            <div class="card-face card-face-front">
+                                <span class="card-label">Question</span>
+                                <div class="card-content" id="cardFrontText"></div>
+                                <span class="card-hint">Click to reveal answer</span>
+                            </div>
+                            <div class="card-face card-face-back">
+                                <span class="card-label" style="color: var(--primary);">Answer</span>
+                                <div class="card-content" id="cardBackText"></div>
+                                <span class="card-hint" style="color: #6b6b6b;">Click to flip back</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flashcard-controls">
+                        <button class="btn btn-outline" onclick="prevCard()" id="prevBtn">
+                            <i class="fa-solid fa-arrow-left"></i> Prev
+                        </button>
+                        <span class="progress-text" id="progressText">1 / 1</span>
+                        <button class="btn btn-primary" onclick="nextCard()" id="nextBtn">
+                            Next <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button class="btn btn-outline btn-sm" onclick="shuffleCards()">
+                            <i class="fa-solid fa-shuffle"></i> Shuffle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List View -->
+                <div id="listView" class="list-view">
+                    <div id="flashcardList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- DOM ---
+    const fileInput   = document.getElementById('fileInput');
+    const dropZone    = document.getElementById('dropZone');
+    const selectBtn   = document.getElementById('selectFileBtn');
+    const fileList    = document.getElementById('fileList');
+    const actionPanel = document.getElementById('actionPanel');
+    const uploadForm  = document.getElementById('uploadForm');
+    const loading     = document.getElementById('loading');
+    const errorSection= document.getElementById('errorSection');
+    const errorText   = document.getElementById('errorText');
+    const resultSection = document.getElementById('resultSection');
+    const card        = document.getElementById('flashcard');
+    const frontText   = document.getElementById('cardFrontText');
+    const backText    = document.getElementById('cardBackText');
+    const progressText= document.getElementById('progressText');
+    const progressBar = document.getElementById('progressBar');
+
+    let flashcards = [];
+    let currentIndex = 0;
+    let isListView = false;
+
+    // --- File Selection ---
+    selectBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        const allowed = ['.pdf','.pptx','.docx','.xlsx','.xls','.txt','.md','.csv','.json','.html','.htm'];
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowed.includes(ext)) {
+            showError('Unsupported file type. Please upload PDF, Word, PowerPoint, Excel, or text files.');
+            return;
+        }
+        fileList.innerHTML = `
+            <div class="file-item">
+                <div class="file-item-info">
+                    <div class="file-item-icon" style="background: var(--primary);">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                    <div class="file-item-details">
+                        <h4>${file.name}</h4>
+                        <p>${(file.size/1024/1024).toFixed(2)} MB</p>
+                    </div>
+                </div>
+            </div>`;
+        actionPanel.style.display = 'block';
+        actionPanel.classList.add('show');
+        hideError();
+    }
+
+    function setNumCards(n, btn) {
+        document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('numCards').value = n;
+    }
+
+    // --- Form Submit ---
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!fileInput.files.length) { showError('Please select a file first.'); return; }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('num_cards', document.getElementById('numCards').value);
+
+        loading.style.display = 'block';
+        resultSection.style.display = 'none';
+        hideError();
+
+        try {
+            const res = await fetch('/api/generate-flashcards', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            loading.style.display = 'none';
+
+            if (data.status === 'success' && data.flashcards && data.flashcards.length > 0) {
+                flashcards = data.flashcards;
+                currentIndex = 0;
+                renderCards();
+                resultSection.style.display = 'block';
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                showError(data.error || 'Failed to generate flashcards. Please try again.');
+            }
+        } catch (err) {
+            loading.style.display = 'none';
+            showError('Network error: ' + err.message);
+        }
+    });
+
+    // --- Card Logic ---
+    function renderCards() {
+        updateCardDisplay();
+        renderListView();
+    }
+
+    function updateCardDisplay() {
+        if (!flashcards.length) return;
+        card.classList.remove('is-flipped');
+        setTimeout(() => {
+            const c = flashcards[currentIndex];
+            frontText.textContent = c.front;
+            backText.textContent  = c.back;
+            progressText.textContent = `${currentIndex + 1} / ${flashcards.length}`;
+            progressBar.style.width = `${((currentIndex + 1) / flashcards.length) * 100}%`;
+            document.getElementById('prevBtn').disabled = currentIndex === 0;
+            document.getElementById('nextBtn').disabled = currentIndex === flashcards.length - 1;
+        }, 150);
+    }
+
+    function flipCard()  { card.classList.toggle('is-flipped'); }
+    function nextCard()  { if (currentIndex < flashcards.length - 1) { currentIndex++; updateCardDisplay(); } }
+    function prevCard()  { if (currentIndex > 0) { currentIndex--; updateCardDisplay(); } }
+
+    function shuffleCards() {
+        for (let i = flashcards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+        }
+        currentIndex = 0;
+        renderCards();
+    }
+
+    function renderListView() {
+        const list = document.getElementById('flashcardList');
+        list.innerHTML = flashcards.map((c, i) => `
+            <div class="flashcard-list-item">
+                <div class="front"><span style="font-size:0.75rem;opacity:0.6;display:block;margin-bottom:0.25rem;">Q${i+1}</span>${c.front}</div>
+                <div class="back">${c.back}</div>
+            </div>`).join('');
+    }
+
+    function toggleView() {
+        isListView = !isListView;
+        document.getElementById('cardView').style.display  = isListView ? 'none' : 'block';
+        document.getElementById('listView').style.display  = isListView ? 'block' : 'none';
+        document.getElementById('viewToggleBtn').innerHTML = isListView
+            ? '<i class="fa-solid fa-clone"></i> Card View'
+            : '<i class="fa-solid fa-list"></i> List View';
+    }
+
+    function resetForm() {
+        fileInput.value = '';
+        fileList.innerHTML = '';
+        actionPanel.style.display = 'none';
+        resultSection.style.display = 'none';
+        hideError();
+        flashcards = [];
+        currentIndex = 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showError(msg) {
+        errorText.textContent = msg;
+        errorSection.style.display = 'block';
+    }
+
+    function hideError() {
+        errorSection.style.display = 'none';
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (resultSection.style.display === 'none' || isListView) return;
+        if (e.key === 'ArrowRight') nextCard();
+        if (e.key === 'ArrowLeft')  prevCard();
+        if (e.key === ' ') { e.preventDefault(); flipCard(); }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,157 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}PowerPoint to PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<!-- Using global styles from main.css -->
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>PowerPoint to PDF</h1>
+            <p>Convert your PPT and PPTX presentations to PDF documents for easy sharing.</p>
+        </div>
+
+        <form id="uploadForm" action="/ppt-to-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".ppt,.pptx" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-file-powerpoint"></i>
+                </div>
+                <h3>Select PowerPoint file</h3>
+                <p>or drop PPTX here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">Select PowerPoint file</button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="progress-wrapper" id="progressWrapper" style="display: none; margin-top: 2rem;">
+                <div class="progress-info">
+                    <span id="progressText">Processing PowerPoint Presentation...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="action-panel" id="actionPanel">
+                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                    Convert to PDF <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<style>
+    .progress-wrapper {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border);
+    }
+
+    .progress-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+
+    .progress-bar {
+        height: 8px;
+        background: var(--border-strong);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileList = document.getElementById('fileList');
+    const uploadForm = document.getElementById('uploadForm');
+    const progressWrapper = document.getElementById('progressWrapper');
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'ppt' || ext === 'pptx') {
+            fileList.innerHTML = `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <div class="file-item-icon" style="background: var(--gradient-secondary);">
+                            <i class="fa-solid fa-file-powerpoint"></i>
+                        </div>
+                        <div class="file-item-details">
+                            <h4>${file.name}</h4>
+                            <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        }
+    }
+
+    uploadForm.addEventListener('submit', (e) => {
+        progressWrapper.style.display = 'block';
+        submitBtn.disabled = true;
+
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 5;
+            if (progress > 95) progress = 95;
+            progressFill.style.width = `${progress}%`;
+            progressPercent.innerText = `${Math.round(progress)}%`;
+        }, 500);
+
+        // Add to history after a short delay (simulating successful start/completion)
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+﻿{% extends 'base.html' %}
+{% block title %}Image Filters — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+    <h1>Image Filters</h1>
+    <p>Apply grayscale, sepia, blur, sharpen, emboss, contour, and more.</p>
+  </div>
+
+  <div class="tool-card">
+    <form id="filterForm" method="POST" enctype="multipart/form-data" action="/image-filters">
+      <div class="upload-area" id="dropZone">
+        <input type="file" name="file" id="fileInput" accept="image/*" required style="display:none">
+        <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
+        <p>Drop an image here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+        <span class="upload-hint">JPG, PNG, WEBP, BMP supported</span>
+        <div id="previewWrap" style="display:none;margin-top:16px">
+          <img id="imgPreview" style="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--border)">
+          <p id="fileName" style="font-size:0.8rem;color:var(--text-tertiary);margin-top:8px"></p>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:24px">
+        <label class="form-label">Choose Filter</label>
+        <div class="filter-grid">
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="grayscale" checked>
+            <span><i class="fa-solid fa-circle-half-stroke"></i> Grayscale</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="sepia">
+            <span><i class="fa-solid fa-palette"></i> Sepia</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="blur">
+            <span><i class="fa-solid fa-droplet"></i> Blur</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="sharpen">
+            <span><i class="fa-solid fa-star-of-life"></i> Sharpen</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="emboss">
+            <span><i class="fa-solid fa-layer-group"></i> Emboss</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="contour">
+            <span><i class="fa-solid fa-draw-polygon"></i> Contour</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="edge_enhance">
+            <span><i class="fa-solid fa-border-none"></i> Edge Enhance</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="flip_h">
+            <span><i class="fa-solid fa-left-right"></i> Flip H</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="flip_v">
+            <span><i class="fa-solid fa-up-down"></i> Flip V</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="filter" value="invert">
+            <span><i class="fa-solid fa-circle"></i> Invert</span>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:24px">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Apply Filter & Download
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+/* filter-grid and filter-opt are in main.css */
+</style>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+const preview   = document.getElementById('imgPreview');
+const previewWrap = document.getElementById('previewWrap');
+const fileName  = document.getElementById('fileName');
+
+function showPreview(file) {
+  if (!file) return;
+  fileName.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; previewWrap.style.display = 'block'; };
+  reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; showPreview(f); }
+});
+</script>
+{% endblock %}

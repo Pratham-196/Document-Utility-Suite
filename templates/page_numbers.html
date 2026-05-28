@@ -1,0 +1,55 @@
+﻿{% extends 'base.html' %}
+{% block title %}Add Page Numbers — Document Utility Suite{% endblock %}
+{% block content %}
+<section class="section"><div class="container">
+<div class="tool-header">
+  <h1><i class="fa-solid fa-list-ol"></i> Add Page Numbers</h1>
+  <p>Stamp page numbers onto every page of your PDF. Choose position, starting number, and font size.</p>
+</div>
+<form action="/page-numbers" method="post" enctype="multipart/form-data" id="uploadForm">
+  <div class="upload-area" id="dropZone">
+    <input type="file" name="file" id="fileInput" accept=".pdf" style="display:none">
+    <div class="upload-icon"><i class="fa-solid fa-list-ol"></i></div>
+    <h3>Select PDF file</h3><p>or drop PDF here</p>
+    <button type="button" class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
+      <i class="fa-solid fa-folder-open"></i> Choose PDF
+    </button>
+  </div>
+  <div id="fileDisplay" style="display:none;margin-top:1.5rem">
+    <div class="file-item" id="selectedFile"></div>
+  </div>
+  <div class="action-panel" id="actionPanel">
+    <div class="form-row" style="max-width:560px;margin:0 auto 20px;">
+      <div class="form-group">
+        <label
+ class="form-label">Position</label>
+        <select name="position" class="form-control form-select">
+          <option value="bottom-center">Bottom Center</option>
+          <option value="bottom-right">Bottom Right</option>
+          <option value="bottom-left">Bottom Left</option>
+          <option value="top-center">Top Center</option>
+          <option value="top-right">Top Right</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Start Number</label>
+        <input type="number" name="start_num" class="form-control" value="1" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Font Size</label>
+        <input type="number" name="font_size" class="form-control" value="12" min="8" max="36">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg"><i class="fa-solid fa-list-ol"></i> Add Page Numbers</button>
+  </div>
+</form>
+</div></section>
+{% endblock %}
+{% block scripts %}<script>
+const fi=document.getElementById('fileInput'),dz=document.getElementById('dropZone'),ap=document.getElementById('actionPanel'),fd=document.getElementById('fileDisplay'),sf=document.getElementById('selectedFile');
+function showFile(f){sf.innerHTML=`<div class="file-item-info"><div class="file-item-icon"><i class="fa-solid fa-file-pdf"></i></div><div class="file-item-details"><h4>${f.name}</h4><p>${(f.size/1024).toFixed(1)} KB</p></div></div>`;fd.style.display='block';ap.classList.add('show');}
+fi.addEventListener('change',()=>{if(fi.files[0])showFile(fi.files[0]);});
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);fi.files=dt.files;showFile(f);}});
+</script>{% endblock %}

@@ -1,0 +1,1288 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}DUS - DOcument Utility Suite{% endblock %}
+
+{% block extra_css %}
+<style>
+/* -- INDEX PAGE � uses CSS vars so light-mode works automatically -- */
+
+.idx-hero {
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -5%, rgba(99,102,241,0.2) 0%, transparent 65%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-subtle) 100%);
+  min-height: 92vh;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 100px 24px 72px;
+  position: relative; overflow: hidden;
+}
+
+.idx-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 52px 52px;
+  pointer-events: none; opacity: 0.6;
+}
+
+.idx-hero-content { max-width: 800px; margin: 0 auto; position: relative; z-index: 2; }
+
+.idx-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary-mid);
+  color: #a5b4fc;
+  padding: 6px 16px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  margin-bottom: 28px; animation: idxFadeUp 0.5s ease both;
+}
+
+/* -- HERO H1 � cursor spotlight reveal -- */
+.idx-hero h1 {
+  font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 900;
+  line-height: 1.06; letter-spacing: -0.04em;
+  margin-bottom: 22px; animation: idxFadeUp 0.5s ease 0.08s both;
+  position: relative;
+  display: block; /* block so both spans stack full-width */
+  cursor: default;
+}
+
+/* Layer 1 � always visible, bright base color */
+.idx-h1-base {
+  display: block;
+  color: #f1f1f5;
+}
+.idx-h1-base .g {
+  background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 40%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Light mode � base text must be dark or it vanishes on white bg */
+body.light-mode .idx-h1-base {
+  color: #111827;
+}
+body.light-mode .idx-h1-base .g {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 40%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+body.light-mode .idx-h1-lit {
+  color: #1e1b4b;
+}
+body.light-mode .idx-h1-lit .g {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #a21caf 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Layer 2 � vivid, revealed only inside the spotlight circle */
+.idx-h1-lit {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: #ffffff;
+  pointer-events: none;
+  /* mask starts as zero-radius circle � JS updates --mx/--my/--mr */
+  -webkit-mask-image: radial-gradient(
+    circle var(--mr, 0px) at var(--mx, 50%) var(--my, 50%),
+    black 0%, black 55%, transparent 100%
+  );
+  mask-image: radial-gradient(
+    circle var(--mr, 0px) at var(--mx, 50%) var(--my, 50%),
+    black 0%, black 55%, transparent 100%
+  );
+}
+.idx-h1-lit .g {
+  background: linear-gradient(135deg, #c7d2fe 0%, #818cf8 40%, #e879f9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.idx-sub {
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  color: var(--text-tertiary);
+  max-width: 540px; margin: 0 auto 32px; line-height: 1.75;
+  animation: idxFadeUp 0.5s ease 0.16s both;
+}
+
+.idx-trust {
+  display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 36px; animation: idxFadeUp 0.5s ease 0.22s both;
+}
+.idx-trust-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--surface-hover); border: 1px solid var(--border);
+  color: var(--text-tertiary);
+  padding: 5px 12px; border-radius: 999px; font-size: 0.73rem; font-weight: 500;
+}
+.idx-trust-badge i { color: #34d399; font-size: 0.65rem; }
+
+.idx-cta {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 56px;
+  animation: idxFadeUp 0.5s ease 0.28s both;
+}
+
+.idx-btn-primary {
+  background: #6366f1;
+  color: white;
+  padding: 14px 30px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 8px 28px rgba(99,102,241,0.3);
+}
+.idx-btn-primary:hover {
+  background: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.5), 0 12px 36px rgba(99,102,241,0.4);
+  color: white;
+}
+
+.idx-btn-secondary {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  padding: 14px 30px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.idx-btn-secondary:hover {
+  background: var(--surface);
+  border-color: var(--primary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.idx-stats {
+  display: flex; justify-content: center; gap: 48px; flex-wrap: wrap;
+  padding-top: 32px; border-top: 1px solid var(--border);
+  animation: idxFadeUp 0.5s ease 0.36s both;
+}
+.idx-stat { text-align: center; }
+.idx-stat-num { display: block; font-size: 1.7rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.03em; }
+.idx-stat-lbl { font-size: 0.67rem; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-top: 4px; display: block; }
+
+@keyframes idxFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Upload section */
+.idx-upload-section {
+  background: var(--bg-subtle); padding: 72px 24px;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.idx-section-header { text-align: center; margin-bottom: 40px; }
+.idx-eyebrow {
+  display: inline-block; background: var(--primary-light); color: #818cf8;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 4px 14px; border-radius: 999px; margin-bottom: 14px;
+}
+.idx-section-header h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800;
+  color: var(--text-primary); letter-spacing: -0.03em; margin-bottom: 10px;
+}
+.idx-section-header p { color: var(--text-tertiary); font-size: 0.9rem; max-width: 460px; margin: 0 auto; line-height: 1.65; }
+
+.idx-upload-box {
+  max-width: 660px; margin: 0 auto;
+  background: var(--surface); border: 2px dashed var(--primary-mid);
+  border-radius: 20px; padding: 52px 36px; text-align: center;
+  cursor: pointer; transition: all 0.2s ease;
+}
+.idx-upload-box:hover,
+.idx-upload-box.dragover {
+  border-color: #6366f1; background: var(--primary-light);
+  transform: translateY(-2px); box-shadow: 0 12px 40px rgba(99,102,241,0.15);
+}
+
+.idx-upload-ring {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: var(--primary-light); border: 2px solid var(--primary-mid);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 22px; font-size: 1.7rem; color: #818cf8; transition: all 0.2s;
+}
+.idx-upload-box:hover .idx-upload-ring {
+  background: rgba(99,102,241,0.18); border-color: #6366f1; transform: scale(1.06);
+}
+
+.idx-upload-box h3 { font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.idx-upload-box p { color: var(--text-tertiary); font-size: 0.85rem; margin-bottom: 22px; }
+
+.idx-format-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 26px;
+}
+.idx-chip {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  color: var(--text-tertiary); padding: 3px 10px; border-radius: 6px;
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em;
+}
+
+.idx-upload-btn {
+  background: #6366f1;
+  color: white;
+  padding: 11px 26px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.18s;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+}
+.idx-upload-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+
+/* -- WHY SECTION -- */
+.idx-why-section {
+  background: var(--bg);
+  padding: 80px 24px;
+}
+
+.idx-why-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.idx-why-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px 22px; text-align: center; transition: all 0.2s;
+}
+.idx-why-card:hover {
+  background: var(--surface-raised); border-color: var(--primary-mid);
+  transform: translateY(-4px); box-shadow: var(--shadow-lg);
+}
+
+.idx-why-icon {
+  width: 50px; height: 50px; border-radius: 12px;
+  background: var(--primary-light); color: #818cf8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; margin: 0 auto 16px; transition: all 0.2s;
+}
+.idx-why-card:hover .idx-why-icon { background: #6366f1; color: white; }
+
+.idx-why-card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.idx-why-card p { font-size: 0.82rem; color: var(--text-tertiary); line-height: 1.65; }
+
+/* -- TOOLS SECTION -- */
+.idx-tools-section {
+  background: var(--bg-subtle);
+  padding: 80px 24px;
+}
+
+.idx-tools-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.idx-tools-top h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800;
+  color: var(--text-primary); letter-spacing: -0.03em; margin-bottom: 4px;
+}
+.idx-tools-top p { color: var(--text-tertiary); font-size: 0.85rem; }
+
+.idx-filter-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.idx-tab {
+  padding: 7px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface-hover);
+  color: var(--text-tertiary); transition: all 0.15s; user-select: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.idx-tab:hover { background: var(--surface); color: var(--text-secondary); }
+.idx-tab.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+}
+
+/* Featured AI card */
+.idx-featured {
+  background: var(--primary-light); border: 1px solid var(--primary-mid);
+  border-radius: 20px; padding: 32px; margin-bottom: 28px;
+  display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+  position: relative; overflow: hidden;
+}
+.idx-featured::before {
+  content: '';
+  position: absolute;
+  top: -50px; right: -50px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.idx-featured-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+}
+
+.idx-featured-body { flex: 1; min-width: 200px; }
+.idx-featured-label {
+  display: inline-block; background: var(--primary-light); color: #a5b4fc;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 999px; margin-bottom: 10px;
+}
+.idx-featured-body h3 { font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 6px; letter-spacing: -0.02em; }
+.idx-featured-body p { color: var(--text-tertiary); font-size: 0.85rem; line-height: 1.65; margin-bottom: 14px; }
+
+.idx-ai-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.idx-ai-chip {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  color: var(--text-tertiary); padding: 4px 12px; border-radius: 999px;
+  font-size: 0.73rem; font-weight: 500; display: inline-flex; align-items: center; gap: 5px;
+}
+
+/* Category divider */
+.idx-cat-label {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-disabled); margin: 28px 0 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.idx-cat-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Tool cards */
+.idx-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-auto-rows: 1fr; /* equal height rows */
+  gap: 20px;
+  overflow: visible;
+  padding-bottom: 14px;
+  padding-right: 14px;
+}
+
+/* Tool card wrapper � holds the hatch layer */
+.idx-card-wrap {
+  position: relative;
+  display: block;
+  height: 100%;
+}
+
+/* Hatch back layer � same size as card, offset behind */
+.idx-card-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  border: 2px solid rgba(99,102,241,0.55);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath d='M-1 1l2-2M0 10l10-10M9 11l2-2' stroke='%236366f1' stroke-width='1.5' stroke-opacity='0.4'/%3E%3C/svg%3E");
+  background-color: rgba(99,102,241,0.05);
+  transform: translate(8px, 8px);
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Front card � solid opaque, sits above the hatch */
+.idx-tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 20px;
+  text-decoration: none;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%; /* fill wrapper so all cards same height */
+}
+
+/* On hover: lift the front card, reveal the hatch strip behind */
+.idx-card-wrap:hover::before {
+  opacity: 1;
+  transform: translate(10px, 10px);
+}
+.idx-card-wrap:hover .idx-tool-card {
+  transform: translateY(-6px) scale(1.02);
+  border-color: rgba(99,102,241,0.5);
+  background: var(--surface-raised);
+}
+
+.idx-tool-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--primary-light); color: #818cf8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; transition: all 0.18s; flex-shrink: 0;
+  margin-bottom: 14px;
+}
+.idx-card-wrap:hover .idx-tool-icon { background: #6366f1; color: white; }
+.idx-tool-title {
+  font-size: 0.875rem; font-weight: 700; color: var(--text-primary);
+  letter-spacing: -0.01em; margin-bottom: 6px; line-height: 1.3;
+}
+.idx-tool-desc {
+  font-size: 0.775rem; color: var(--text-tertiary); line-height: 1.55;
+  flex: 1; /* pushes badge to bottom */
+}
+
+.idx-cat-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 14px;
+}
+.badge-ai   { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+.badge-pdf  { background: rgba(239,68,68,0.12);  color: #fca5a5; }
+.badge-conv { background: rgba(59,130,246,0.12); color: #93c5fd; }
+.badge-img  { background: rgba(16,185,129,0.12); color: #6ee7b7; }
+
+.idx-tool-card.hidden { display: none; }
+
+@media (max-width: 768px) {
+  .idx-hero { padding: 80px 20px 56px; min-height: auto; }
+  .idx-hero h1 { font-size: 2.1rem; }
+  .idx-stats { gap: 28px; }
+  .idx-upload-box { padding: 36px 20px; }
+  .idx-featured { flex-direction: column; gap: 20px; }
+  .idx-tools-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .idx-tools-top { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  .idx-hero h1 { font-size: 1.8rem; }
+  .idx-cta { flex-direction: column; align-items: center; }
+  .idx-tools-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .idx-why-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="idx-hero">
+  <div class="idx-hero-content">
+    <div class="idx-badge">
+      <i class="fa-solid fa-bolt"></i> 50+ Free Tools - No Sign-up Required
+    </div>
+
+    <h1 id="spotH1">
+      <span class="idx-h1-base">Every tool you need for<br><span class="g">PDFs &amp; Images</span></span>
+      <span class="idx-h1-lit" aria-hidden="true">Every tool you need for<br><span class="g">PDFs &amp; Images</span></span>
+    </h1>
+
+    <p class="idx-sub">Edit, convert, compress, merge, watermark, and more - all in one place. Fast, private, and completely free.</p>
+
+    <div class="idx-trust">
+      <span class="idx-trust-badge"><i class="fa-solid fa-check"></i> No account needed</span>
+      <span class="idx-trust-badge"><i class="fa-solid fa-check"></i> No hidden fees</span>
+      <span class="idx-trust-badge"><i class="fa-solid fa-check"></i> Files stored for short period</span>
+      
+    </div>
+
+    <div class="idx-cta">
+      <a href="#tools" class="idx-btn-primary">
+        <i class="fa-solid fa-rocket"></i> Get Started Free
+      </a>
+      <a href="/edit-pdf" class="idx-btn-secondary">
+        <i class="fa-solid fa-pen-to-square"></i> Try PDF Editor
+      </a>
+    </div>
+
+    <div class="idx-stats">
+      <div class="idx-stat">
+        <span class="idx-stat-num">50+</span>
+        <span class="idx-stat-lbl">Tools Available</span>
+      </div>
+      <div class="idx-stat">
+        <span class="idx-stat-num">100%</span>
+        <span class="idx-stat-lbl">Privacy Protected</span>
+      </div>
+      <div class="idx-stat">
+        <span class="idx-stat-num">30 min</span>
+        <span class="idx-stat-lbl">Auto-Delete</span>
+      </div>
+      <div class="idx-stat">
+        <span class="idx-stat-num">Free</span>
+        <span class="idx-stat-lbl">Forever</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SMART UPLOAD -->
+<section class="idx-upload-section">
+  <div class="container">
+    <div class="idx-section-header">
+      <span class="idx-eyebrow">Smart Detection</span>
+      <h2>Drop any file to get started</h2>
+      <p>We automatically detect the file type and suggest the right tool for you.</p>
+    </div>
+
+    <div class="idx-upload-box" id="smartDropZone">
+      <input type="file" id="smartFileInput" style="display:none"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff,.txt,.md,.csv,.json,.html">
+      <div class="idx-upload-ring">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+      </div>
+      <h3>Drop your file here to get started</h3>
+      <p>or click to browse from your device</p>
+      <div class="idx-format-chips">
+        <span class="idx-chip">PDF</span>
+        <span class="idx-chip">Word</span>
+        <span class="idx-chip">Excel</span>
+        <span class="idx-chip">PowerPoint</span>
+        <span class="idx-chip">JPG / PNG / WEBP</span>
+        <span class="idx-chip">CSV</span>
+        <span class="idx-chip">JSON</span>
+        <span class="idx-chip">Markdown</span>
+      </div>
+      <button class="idx-upload-btn" onclick="document.getElementById('smartFileInput').click()">
+        <i class="fa-solid fa-folder-open"></i> Choose File
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- WHY CHOOSE -->
+<section class="idx-why-section">
+  <div class="container">
+    <div class="idx-section-header">
+      <span class="idx-eyebrow">Why Document Utility Suite</span>
+      <h2>Built for everyone, not just experts</h2>
+      <p>No installs, no accounts, no complexity. Just upload and get it done.</p>
+    </div>
+    <div class="idx-why-grid">
+      <div class="idx-why-card">
+        <div class="idx-why-icon"><i class="fa-solid fa-shield-halved"></i></div>
+        <h3>Privacy First</h3>
+        <p>Files are automatically deleted after 30 minutes. We never store or access your documents.</p>
+      </div>
+      <div class="idx-why-card">
+        <div class="idx-why-icon"><i class="fa-solid fa-mobile-screen"></i></div>
+        <h3>Works Everywhere</h3>
+        <p>Fully responsive � works perfectly on desktop, tablet, and mobile. No app needed.</p>
+      </div>
+      <div class="idx-why-card">
+        <div class="idx-why-icon"><i class="fa-solid fa-infinity"></i></div>
+        <h3>100% Free Forever</h3>
+        <p>All tools are completely free with no hidden fees, subscriptions, or limitations.</p>
+      </div>
+      <div class="idx-why-card">
+        <div class="idx-why-icon"><i class="fa-solid fa-bolt"></i></div>
+        <h3>Instant Results</h3>
+        <p>Fast processing powered by Python. Most operations complete in seconds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS SECTION -->
+<section class="idx-tools-section" id="tools">
+  <div class="container">
+
+    <div class="idx-tools-top">
+      <div>
+        <h2>59+ Professional Tools</h2>
+        <p>Everything you need for documents and images, in one place.</p>
+      </div>
+    </div>
+
+    <div class="idx-filter-tabs">
+      <button class="idx-tab active" data-filter="all">All Tools</button>
+      <button class="idx-tab" data-filter="ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI-Powered</button>
+      <button class="idx-tab" data-filter="pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+      <button class="idx-tab" data-filter="convert"><i class="fa-solid fa-repeat"></i> Convert</button>
+      <button class="idx-tab" data-filter="image"><i class="fa-regular fa-image"></i> Image</button>
+    </div>
+
+    <!-- Featured AI Card -->
+    <div class="idx-featured" data-cat="ai">
+      <div class="idx-featured-icon"><i class="fa-solid fa-comments"></i></div>
+      <div class="idx-featured-body">
+        <span class="idx-featured-label">? Featured AI Tool</span>
+        <h3>Chat with Document</h3>
+        <p>Upload any file and ask questions about it. Get instant AI-powered answers from PDFs, Word docs, Excel sheets, PowerPoints, CSVs, and more.</p>
+        <div class="idx-ai-chips">
+          <span class="idx-ai-chip"><i class="fa-solid fa-file"></i> Any file format</span>
+          <span class="idx-ai-chip"><i class="fa-solid fa-bolt"></i> Instant answers</span>
+          <span class="idx-ai-chip"><i class="fa-solid fa-user-slash"></i> No login needed</span>
+        </div>
+      </div>
+      <div style="flex-shrink:0">
+        <a href="/chat_document" class="idx-btn-primary" style="font-size:0.875rem;padding:11px 22px;">
+          Try it free <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- AI Tools -->
+    <div class="idx-cat-label" data-cat="ai">AI-Powered Tools</div>
+    <div class="idx-tools-grid" id="toolsGrid" data-section="ai">
+
+      <div class="idx-card-wrap">
+      <a href="/summarize-pdf" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <div class="idx-tool-title">Summarize PDF</div><div class="idx-tool-desc">Get key points from long documents using AI.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/translate-pdf" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-language"></i></div>
+        <div class="idx-tool-title">Translate PDF</div><div class="idx-tool-desc">Translate documents into 50+ languages.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/generate-flashcards" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="idx-tool-title">Flashcard Generator</div><div class="idx-tool-desc">Auto-create study flashcards from any document.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/generate-questions" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-circle-question"></i></div>
+        <div class="idx-tool-title">Question Generator</div><div class="idx-tool-desc">Generate MCQ, short answer, and True/False questions.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/remove-background" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-scissors"></i></div>
+        <div class="idx-tool-title">Remove Background</div><div class="idx-tool-desc">AI-powered background removal from images.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/document-brief" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-contract"></i></div>
+        <div class="idx-tool-title">Smart Document Brief</div><div class="idx-tool-desc">AI intelligence report � entities, dates, risks, action items.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/rewrite-document" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-pen-nib"></i></div>
+        <div class="idx-tool-title">AI Document Rewriter</div><div class="idx-tool-desc">Rewrite in Formal, Casual, Simpler, Academic, or Bullet Points.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/ocr-correct" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-spell-check"></i></div>
+        <div class="idx-tool-title">AI OCR Correction</div><div class="idx-tool-desc">Fix garbled OCR output from scanned documents automatically.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/tone-analyzer" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-chart-bar"></i></div>
+        <div class="idx-tool-title">Tone &amp; Sentiment</div><div class="idx-tool-desc">Analyze sentiment score, formality, reading level, and tone tags.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/ai-compare" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-code-compare"></i></div>
+        <div class="idx-tool-title">AI Doc Comparison</div><div class="idx-tool-desc">Upload two versions and get an AI explanation of every change.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/resume-intelligence" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-user-tie"></i></div>
+        <div class="idx-tool-title">Resume Intelligence</div><div class="idx-tool-desc">AI extracts skills, experience, education, and contact info from any resume.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/invoice-intelligence" class="idx-tool-card" data-cat="ai">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div class="idx-tool-title">Invoice Intelligence</div><div class="idx-tool-desc">AI extracts vendor, client, amounts, line items, and dates from invoices.</div>
+        <span class="idx-cat-badge badge-ai">AI</span>
+      </a>
+      </div>
+
+    </div><!-- /toolsGrid -->
+
+    <!-- PDF Tools -->
+    <div class="idx-cat-label" data-cat="pdf">PDF Tools</div>
+    <div class="idx-tools-grid" data-section="pdf">
+
+      <div class="idx-card-wrap">
+      <a href="/edit-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-pen-to-square"></i></div>
+        <div class="idx-tool-title">Edit PDF</div><div class="idx-tool-desc">Add text, whiteout areas, and annotate.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/merge-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-code-merge"></i></div>
+        <div class="idx-tool-title">Merge PDF</div><div class="idx-tool-desc">Combine multiple PDFs in any order.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/split-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-scissors"></i></div>
+        <div class="idx-tool-title">Split PDF</div><div class="idx-tool-desc">Separate pages into individual files.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/compress-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-compress"></i></div>
+        <div class="idx-tool-title">Compress PDF</div><div class="idx-tool-desc">Reduce file size while keeping quality.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/rotate-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-rotate-right"></i></div>
+        <div class="idx-tool-title">Rotate PDF</div><div class="idx-tool-desc">Rotate pages to portrait or landscape.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/watermark-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-stamp"></i></div>
+        <div class="idx-tool-title">Watermark PDF</div><div class="idx-tool-desc">Add text watermarks with full control.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/protect-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-lock"></i></div>
+        <div class="idx-tool-title">Protect PDF</div><div class="idx-tool-desc">Password-encrypt your PDF files.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/sign-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-signature"></i></div>
+        <div class="idx-tool-title">Sign PDF</div><div class="idx-tool-desc">Draw and place your signature.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/ocr-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-invoice"></i></div>
+        <div class="idx-tool-title">OCR PDF</div><div class="idx-tool-desc">Extract text from scanned documents.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/remove-pages" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-trash-can"></i></div>
+        <div class="idx-tool-title">Remove Pages</div><div class="idx-tool-desc">Delete unwanted pages from your PDF.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/extract-pages" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-export"></i></div>
+        <div class="idx-tool-title">Extract Pages</div><div class="idx-tool-desc">Pull specific pages into a new PDF.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/redact-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-user-secret"></i></div>
+        <div class="idx-tool-title">Redact PDF</div><div class="idx-tool-desc">Permanently remove sensitive content.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/compare-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-code-compare"></i></div>
+        <div class="idx-tool-title">Compare PDFs</div><div class="idx-tool-desc">Diff two documents, get a change report.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/edit-metadata" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-tags"></i></div>
+        <div class="idx-tool-title">Edit Metadata</div><div class="idx-tool-desc">Update title, author, subject, keywords.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/flatten-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="idx-tool-title">Flatten PDF</div><div class="idx-tool-desc">Flatten form fields and annotations.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/repair-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-wrench"></i></div>
+        <div class="idx-tool-title">Repair PDF</div><div class="idx-tool-desc">Fix corrupted or broken PDF files.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/unlock-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-lock-open"></i></div>
+        <div class="idx-tool-title">Unlock PDF</div><div class="idx-tool-desc">Remove password protection from PDFs.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/page-numbers" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-list-ol"></i></div>
+        <div class="idx-tool-title">Add Page Numbers</div><div class="idx-tool-desc">Stamp page numbers on every page.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/reverse-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-arrow-right-arrow-left"></i></div>
+        <div class="idx-tool-title">Reverse PDF</div><div class="idx-tool-desc">Reverse the page order of a PDF.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/pdf-fonts" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-font"></i></div>
+        <div class="idx-tool-title">Font Inspector</div><div class="idx-tool-desc">List all fonts embedded in a PDF.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/normalize-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-ruler-combined"></i></div>
+        <div class="idx-tool-title">Normalize PDF</div><div class="idx-tool-desc">Standardize all pages to one size.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/crop-pdf" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-crop"></i></div>
+        <div class="idx-tool-title">Crop PDF</div><div class="idx-tool-desc">Trim margins and whitespace from all pages.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/pdf-to-text" class="idx-tool-card" data-cat="pdf">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-lines"></i></div>
+        <div class="idx-tool-title">PDF to Text</div><div class="idx-tool-desc">Extract the text layer directly to a .txt file.</div>
+        <span class="idx-cat-badge badge-pdf">PDF</span>
+      </a>
+      </div>
+
+    </div>
+
+    <!-- Convert Tools -->
+    <div class="idx-cat-label" data-cat="convert">Convert Tools</div>
+    <div class="idx-tools-grid" data-section="convert">
+
+      <div class="idx-card-wrap">
+      <a href="/pdf-to-word" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-word"></i></div>
+        <div class="idx-tool-title">PDF to Word</div><div class="idx-tool-desc">Convert PDF to editable DOCX.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/pdf-to-ppt" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-powerpoint"></i></div>
+        <div class="idx-tool-title">PDF to PowerPoint</div><div class="idx-tool-desc">Convert PDF pages to editable slides.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/pdf-to-image" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-regular fa-image"></i></div>
+        <div class="idx-tool-title">PDF to JPG</div><div class="idx-tool-desc">Save each PDF page as an image.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/image-to-pdf" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-pdf"></i></div>
+        <div class="idx-tool-title">JPG to PDF</div><div class="idx-tool-desc">Convert images to PDF in seconds.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/word-to-pdf" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-pdf"></i></div>
+        <div class="idx-tool-title">Word to PDF</div><div class="idx-tool-desc">Convert DOCX files to PDF.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/excel-to-pdf" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-excel"></i></div>
+        <div class="idx-tool-title">Excel to PDF</div><div class="idx-tool-desc">Convert spreadsheets and CSV to PDF.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/ppt-to-pdf" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-file-powerpoint"></i></div>
+        <div class="idx-tool-title">PPT to PDF</div><div class="idx-tool-desc">Convert presentations to PDF.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/url-to-pdf" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-globe"></i></div>
+        <div class="idx-tool-title">URL to PDF</div><div class="idx-tool-desc">Convert any website to a PDF.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/markdown-to-pdf" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-brands fa-markdown"></i></div>
+        <div class="idx-tool-title">Markdown to PDF</div><div class="idx-tool-desc">Convert Markdown files to styled PDFs.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/pdf-to-csv" class="idx-tool-card" data-cat="convert">
+        <div class="idx-tool-icon"><i class="fa-solid fa-table"></i></div>
+        <div class="idx-tool-title">PDF Tables to CSV</div><div class="idx-tool-desc">Extract tables from PDFs into spreadsheet CSV files.</div>
+        <span class="idx-cat-badge badge-conv">Convert</span>
+      </a>
+      </div>
+
+    </div>
+
+    <!-- Image Tools -->
+    <div class="idx-cat-label" data-cat="image">Image Tools</div>
+    <div class="idx-tools-grid" data-section="image">
+
+      <div class="idx-card-wrap">
+      <a href="/compress-image" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-minimize"></i></div>
+        <div class="idx-tool-title">Compress Image</div><div class="idx-tool-desc">Reduce JPG, PNG, WEBP file size.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/convert-image" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-repeat"></i></div>
+        <div class="idx-tool-title">Convert Image</div><div class="idx-tool-desc">Convert between JPG, PNG, WEBP.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/upscale-image" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-expand"></i></div>
+        <div class="idx-tool-title">Upscale Image</div><div class="idx-tool-desc">Increase resolution with quality resampling.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/crop-image" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-crop"></i></div>
+        <div class="idx-tool-title">Crop Image</div><div class="idx-tool-desc">Crop images to any size or ratio.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/generate-qr" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-qrcode"></i></div>
+        <div class="idx-tool-title">QR Code Generator</div><div class="idx-tool-desc">Generate QR codes from text or URLs.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/create-collage" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-table-cells"></i></div>
+        <div class="idx-tool-title">Create Collage</div><div class="idx-tool-desc">Combine multiple images into a collage.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/add-border" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-border-all"></i></div>
+        <div class="idx-tool-title">Add Border</div><div class="idx-tool-desc">Add customizable borders to images.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/add-text-to-image" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-text-height"></i></div>
+        <div class="idx-tool-title">Add Text to Image</div><div class="idx-tool-desc">Add custom text overlays to images.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/resize-image" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div>
+        <div class="idx-tool-title">Resize Image</div><div class="idx-tool-desc">Resize by dimensions or percentage.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/image-filters" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <div class="idx-tool-title">Image Filters</div><div class="idx-tool-desc">Grayscale, sepia, blur, sharpen, emboss.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/exif-tool" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-circle-info"></i></div>
+        <div class="idx-tool-title">EXIF Viewer</div><div class="idx-tool-desc">View or strip metadata from photos.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+      <div class="idx-card-wrap">
+      <a href="/image-to-base64" class="idx-tool-card" data-cat="image">
+        <div class="idx-tool-icon"><i class="fa-solid fa-code"></i></div>
+        <div class="idx-tool-title">Image to Base64</div><div class="idx-tool-desc">Convert images to Base64 / data URI.</div>
+        <span class="idx-cat-badge badge-img">Image</span>
+      </a>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<script>
+// Filter tabs � works across all grids
+const tabs = document.querySelectorAll('.idx-tab');
+const allCards = document.querySelectorAll('.idx-tool-card[data-cat]');
+const catLabels = document.querySelectorAll('.idx-cat-label[data-cat]');
+const allGrids = document.querySelectorAll('.idx-tools-grid[data-section]');
+const featuredCard = document.querySelector('.idx-featured[data-cat]');
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const filter = tab.dataset.filter;
+
+    allCards.forEach(card => {
+      const wrap = card.closest('.idx-card-wrap') || card;
+      const hide = filter !== 'all' && card.dataset.cat !== filter;
+      wrap.style.display = hide ? 'none' : '';
+    });
+
+    catLabels.forEach(label => {
+      label.style.display = (filter === 'all' || label.dataset.cat === filter) ? '' : 'none';
+    });
+
+    allGrids.forEach(grid => {
+      grid.style.display = (filter === 'all' || grid.dataset.section === filter) ? '' : 'none';
+    });
+
+    if (featuredCard) {
+      featuredCard.style.display = (filter === 'all' || filter === 'ai') ? '' : 'none';
+    }
+  });
+});
+
+// Smart upload
+const smartInput = document.getElementById('smartFileInput');
+const smartZone  = document.getElementById('smartDropZone');
+
+const routeMap = {
+  'application/pdf': '/chat_document',
+  'application/msword': '/chat_document',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '/chat_document',
+  'application/vnd.ms-excel': '/chat_document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '/chat_document',
+  'application/vnd.ms-powerpoint': '/chat_document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '/chat_document',
+  'image/jpeg': '/compress-image',
+  'image/png': '/compress-image',
+  'image/webp': '/compress-image',
+  'text/plain': '/chat_document',
+  'text/csv': '/chat_document',
+  'application/json': '/chat_document',
+  'text/html': '/chat_document',
+  'text/markdown': '/chat_document',
+};
+
+function handleSmartFile(file) {
+  window.location.href = routeMap[file.type] || '/chat_document';
+}
+
+smartInput.addEventListener('change', () => { if (smartInput.files[0]) handleSmartFile(smartInput.files[0]); });
+smartZone.addEventListener('dragover', e => { e.preventDefault(); smartZone.classList.add('dragover'); });
+smartZone.addEventListener('dragleave', () => smartZone.classList.remove('dragover'));
+smartZone.addEventListener('drop', e => {
+  e.preventDefault();
+  smartZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleSmartFile(e.dataTransfer.files[0]);
+});
+// Navbar scroll effect
+window.addEventListener('scroll', () => {
+  document.querySelector('.navbar').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// Spotlight headline � cursor follows with lerp
+(function () {
+  const h1  = document.getElementById('spotH1');
+  const lit = h1 && h1.querySelector('.idx-h1-lit');
+  if (!h1 || !lit) return;
+
+  const TARGET_R = 160; // spotlight radius in px
+  let mx = 0, my = 0;          // target position (px relative to h1)
+  let cx = 0, cy = 0;          // current lerped position
+  let cr = 0;                  // current radius (lerped)
+  let tr = 0;                  // target radius
+  let raf = null;
+  let inside = false;
+
+  function update() {
+    const ease = 0.14;
+    cx += (mx - cx) * ease;
+    cy += (my - cy) * ease;
+    cr += (tr - cr) * 0.10;
+
+    const rect = h1.getBoundingClientRect();
+    // convert px offsets to % relative to h1 size
+    const px = (cx / rect.width  * 100).toFixed(2) + '%';
+    const py = (cy / rect.height * 100).toFixed(2) + '%';
+
+    lit.style.setProperty('--mx', px);
+    lit.style.setProperty('--my', py);
+    lit.style.setProperty('--mr', cr.toFixed(1) + 'px');
+
+    const stillMoving = Math.abs(tr - cr) > 0.5 ||
+                        Math.abs(mx - cx) > 0.3 ||
+                        Math.abs(my - cy) > 0.3;
+    if (stillMoving) raf = requestAnimationFrame(update);
+    else raf = null;
+  }
+
+  function kick() {
+    if (!raf) raf = requestAnimationFrame(update);
+  }
+
+  h1.addEventListener('mouseenter', () => {
+    inside = true;
+    tr = TARGET_R;
+    kick();
+  });
+
+  h1.addEventListener('mousemove', e => {
+    const rect = h1.getBoundingClientRect();
+    mx = e.clientX - rect.left;
+    my = e.clientY - rect.top;
+    kick();
+  });
+
+  h1.addEventListener('mouseleave', () => {
+    inside = false;
+    tr = 0;
+    kick();
+  });
+})();
+</script>
+
+{% endblock %}

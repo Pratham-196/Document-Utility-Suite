@@ -1,0 +1,138 @@
+﻿{% extends 'base.html' %}
+{% block title %}Color Palette Extractor — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-palette"></i></div>
+    <h1>Color Palette Extractor</h1>
+    <p>Extract the dominant colors from any image as hex codes. Great for design, branding, and inspiration.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
+      <p>Drop an image here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">JPG, PNG, WEBP supported</span>
+    </div>
+
+    <div style="margin-top:20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <label class="form-label" style="margin:0">Colors to extract:</label>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="tab-btn active" data-n="4" onclick="setN(4,this)">4</button>
+        <button type="button" class="tab-btn" data-n="6" onclick="setN(6,this)">6</button>
+        <button type="button" class="tab-btn" data-n="8" onclick="setN(8,this)">8</button>
+        <button type="button" class="tab-btn" data-n="10" onclick="setN(10,this)">10</button>
+      </div>
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:24px;text-align:center;color:var(--text-tertiary)">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:8px;display:block"></i>
+      Extracting colors…
+    </div>
+
+    <div id="resultArea" style="display:none;margin-top:28px">
+      <div id="previewRow" style="display:flex;gap:0;border-radius:12px;overflow:hidden;height:56px;margin-bottom:20px"></div>
+      <div id="swatchGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px"></div>
+      <button id="copyAllBtn" class="btn btn-outline btn-sm" style="margin-top:16px">
+        <i class="fa-solid fa-copy"></i> Copy All Hex Codes
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let numColors = 4;
+let currentFile = null;
+
+function setN(n, btn) {
+  numColors = n;
+  document.querySelectorAll('[data-n]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (currentFile) extractColors(currentFile);
+}
+
+function extractColors(file) {
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('resultArea').style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('num_colors', numColors);
+
+  fetch('/extract-palette', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('loadingState').style.display = 'none';
+      if (data.error) { alert(data.error); return; }
+      renderPalette(data.colors);
+    })
+    .catch(() => {
+      document.getElementById('loadingState').style.display = 'none';
+      alert('Failed to extract palette.');
+    });
+}
+
+function renderPalette(colors) {
+  const previewRow = document.getElementById('previewRow');
+  const swatchGrid = document.getElementById('swatchGrid');
+
+  previewRow.innerHTML = colors.map(c =>
+    `<div style="flex:1;background:${c};transition:flex 0.2s" title="${c}"></div>`
+  ).join('');
+
+  swatchGrid.innerHTML = colors.map(c => `
+    <div class="palette-swatch" onclick="copyHex('${c}',this)" title="Click to copy"
+      style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform 0.15s">
+      <div style="height:64px;background:${c}"></div>
+      <div style="padding:10px 12px">
+        <code style="font-size:0.82rem;font-weight:700;color:var(--text-primary)">${c}</code>
+        <p style="font-size:0.7rem;color:var(--text-tertiary);margin:2px 0 0">click to copy</p>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('resultArea').style.display = 'block';
+
+  document.getElementById('copyAllBtn').onclick = () => {
+    navigator.clipboard.writeText(colors.join('\n'));
+    document.getElementById('copyAllBtn').innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+    setTimeout(() => {
+      document.getElementById('copyAllBtn').innerHTML = '<i class="fa-solid fa-copy"></i> Copy All Hex Codes';
+    }, 2000);
+  };
+}
+
+function copyHex(hex, el) {
+  navigator.clipboard.writeText(hex);
+  const orig = el.querySelector('p').textContent;
+  el.querySelector('p').textContent = '✓ Copied!';
+  setTimeout(() => { el.querySelector('p').textContent = orig; }, 1500);
+}
+
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+
+function handleFile(file) {
+  currentFile = file;
+  extractColors(file);
+}
+
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; handleFile(f); }
+});
+</script>
+{% endblock %}

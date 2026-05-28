@@ -1,0 +1,167 @@
+﻿{% extends 'base.html' %}
+{% block title %}Resume Intelligence — Document Utility Suite{% endblock %}
+{% block extra_css %}
+<style>
+.ri-section { margin-bottom: 24px; }
+.ri-section-title {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-disabled); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.ri-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.ri-name {
+  font-size: 1.4rem; font-weight: 800; color: var(--text-primary);
+  background: var(--primary-light); border: 1px solid var(--primary-mid);
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;
+}
+.ri-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.ri-meta-item {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-hover); border: 1px solid var(--border);
+  color: var(--text-secondary); padding: 5px 14px; border-radius: 999px; font-size: 0.8rem;
+}
+.ri-tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.ri-tag {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  color: var(--text-secondary); padding: 4px 12px; border-radius: 8px; font-size: 0.8rem;
+}
+.ri-exp-card {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+}
+.ri-exp-title { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; }
+.ri-exp-company { color: var(--primary); font-size: 0.82rem; margin-bottom: 6px; }
+.ri-exp-duration { color: var(--text-disabled); font-size: 0.78rem; margin-bottom: 8px; }
+.ri-exp-highlights { list-style: disc; padding-left: 18px; color: var(--text-secondary); font-size: 0.82rem; }
+.ri-edu-card {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;
+}
+.ri-summary { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.7; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-user-tie"></i></div>
+    <h1>Resume Intelligence</h1>
+    <p>Upload a resume and instantly extract skills, experience, education, and contact details using AI.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-user-tie"></i></div>
+      <p>Drop a resume here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">PDF, Word, TXT supported</span>
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:28px;text-align:center">
+      <div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px"></div>
+      <p style="color:var(--text-secondary);font-size:0.875rem">Analyzing resume with AI…</p>
+    </div>
+
+    <div id="errorBox" style="display:none;margin-top:20px" class="alert alert-error"></div>
+    <div id="resultBox" style="display:none;margin-top:28px"></div>
+  </div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+const loading   = document.getElementById('loadingState');
+const errorBox  = document.getElementById('errorBox');
+const resultBox = document.getElementById('resultBox');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; analyze(); } });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) analyze(); });
+
+function analyze() {
+  const file = fileInput.files[0];
+  if (!file) return;
+  errorBox.style.display = 'none';
+  resultBox.style.display = 'none';
+  loading.style.display = 'block';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  fetch('/resume-intelligence', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(res => {
+      loading.style.display = 'none';
+      if (res.error) { errorBox.textContent = res.error; errorBox.style.display = 'block'; return; }
+      renderResult(res.data);
+    })
+    .catch(() => { loading.style.display = 'none'; errorBox.textContent = 'Something went wrong. Please try again.'; errorBox.style.display = 'block'; });
+}
+
+function tag(t) { return `<span class="ri-tag">${t}</span>`; }
+function metaItem(icon, val) { return val ? `<span class="ri-meta-item"><i class="${icon}"></i> ${val}</span>` : ''; }
+
+function renderResult(d) {
+  let html = '';
+
+  if (d.name) html += `<div class="ri-name"><i class="fa-solid fa-user" style="color:var(--primary);margin-right:8px"></i>${d.name}</div>`;
+
+  html += `<div class="ri-meta">
+    ${metaItem('fa-solid fa-envelope', d.email)}
+    ${metaItem('fa-solid fa-phone', d.phone)}
+    ${metaItem('fa-solid fa-location-dot', d.location)}
+  </div>`;
+
+  if (d.summary) {
+    html += `<div class="ri-section"><div class="ri-section-title">Summary</div><p class="ri-summary">${d.summary}</p></div>`;
+  }
+
+  if (d.skills && d.skills.length) {
+    html += `<div class="ri-section"><div class="ri-section-title">Skills</div><div class="ri-tag-list">${d.skills.map(tag).join('')}</div></div>`;
+  }
+
+  if (d.experience && d.experience.length) {
+    html += `<div class="ri-section"><div class="ri-section-title">Experience</div>`;
+    d.experience.forEach(e => {
+      html += `<div class="ri-exp-card">
+        <div class="ri-exp-title">${e.title || ''}</div>
+        <div class="ri-exp-company">${e.company || ''}</div>
+        <div class="ri-exp-duration">${e.duration || ''}</div>
+        ${e.highlights && e.highlights.length ? `<ul class="ri-exp-highlights">${e.highlights.map(h=>`<li>${h}</li>`).join('')}</ul>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (d.education && d.education.length) {
+    html += `<div class="ri-section"><div class="ri-section-title">Education</div>`;
+    d.education.forEach(e => {
+      html += `<div class="ri-edu-card">
+        <div class="ri-exp-title">${e.degree || ''}</div>
+        <div class="ri-exp-company">${e.institution || ''}</div>
+        <div class="ri-exp-duration">${e.year || ''}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (d.certifications && d.certifications.length) {
+    html += `<div class="ri-section"><div class="ri-section-title">Certifications</div><div class="ri-tag-list">${d.certifications.map(tag).join('')}</div></div>`;
+  }
+
+  if (d.languages && d.languages.length) {
+    html += `<div class="ri-section"><div class="ri-section-title">Languages</div><div class="ri-tag-list">${d.languages.map(tag).join('')}</div></div>`;
+  }
+
+  resultBox.innerHTML = html;
+  resultBox.style.display = 'block';
+}
+</script>
+{% endblock %}

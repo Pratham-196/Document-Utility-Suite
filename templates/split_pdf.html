@@ -1,0 +1,93 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Split PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<!-- Using global styles from main.css -->
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Split PDF</h1>
+            <p>Separate PDF pages into individual files.</p>
+        </div>
+
+        <form id="uploadForm" action="/split-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-scissors"></i>
+                </div>
+                <h3>Select PDF file</h3>
+                <p>or drop PDF here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">Select PDF file</button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="action-panel" id="actionPanel">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Split PDF <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileList = document.getElementById('fileList');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (file.type === 'application/pdf') {
+            fileList.innerHTML = `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <div class="file-item-icon">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <div class="file-item-details">
+                            <h4>${file.name}</h4>
+                            <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        }
+    }
+</script>
+{% endblock %}

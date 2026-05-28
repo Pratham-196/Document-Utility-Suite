@@ -1,0 +1,122 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Compress Image - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<style>
+    .range-container {
+        max-width: 400px;
+        margin: 1.5rem auto;
+        text-align: left;
+        background: var(--light-surface);
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+    }
+
+    input[type=range] {
+        width: 100%;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Compress Image</h1>
+            <p>Compress JPG, PNG, and WEBP images with the best quality and compression.</p>
+        </div>
+
+        <form id="uploadForm" action="/compress-image" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept="image/*" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-minimize"></i>
+                </div>
+                <h3>Select Image</h3>
+                <p>or drop image here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">Select Image</button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="action-panel" id="actionPanel">
+                <div class="range-container">
+                    <label for="quality" style="font-weight: 600;">Compression Quality: <span
+                            id="qualityVal">60</span>%</label>
+                    <input type="range" name="quality" id="quality" min="10" max="95" value="60">
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem;">Lower quality results
+                        in smaller file sizes.</p>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Compress Image <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileList = document.getElementById('fileList');
+    const quality = document.getElementById('quality');
+    const qualityVal = document.getElementById('qualityVal');
+
+    quality.addEventListener('input', (e) => {
+        qualityVal.textContent = e.target.value;
+    });
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (file.type.startsWith('image/')) {
+            fileList.innerHTML = `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <div class="file-item-icon" style="background: var(--gradient-secondary);">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="file-item-details">
+                            <h4>${file.name}</h4>
+                            <p>${(file.size / 1024 / 1024).toFixed(2)} MB • ${file.type.split('/')[1].toUpperCase()}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        }
+    }
+</script>
+{% endblock %}

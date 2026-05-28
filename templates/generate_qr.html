@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+
+{% block title %}QR Code Generator — DUS{% endblock %}
+
+{% block extra_css %}
+<style>
+.qr-wrap {
+  max-width: 780px;
+  margin: 48px auto;
+  padding: 0 16px 64px;
+}
+
+.qr-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 40px;
+}
+
+.qr-card h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.qr-card .subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 32px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-group textarea,
+.form-group input[type="number"],
+.form-group input[type="color"] {
+  width: 100%;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.form-group textarea:focus,
+.form-group input[type="number"]:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.color-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.color-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.color-input-wrap input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+.color-input-wrap span {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.btn-generate {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.2s;
+}
+
+.btn-generate:hover { opacity: 0.88; }
+.btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Result panel */
+.qr-result {
+  display: none;
+  margin-top: 32px;
+  text-align: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 24px;
+}
+
+.qr-result img {
+  max-width: 260px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 8px;
+}
+
+.qr-result .qr-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+
+.btn-dl:hover { opacity: 0.85; }
+
+.btn-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.btn-reset:hover { border-color: var(--primary); color: var(--primary); }
+
+.error-msg {
+  display: none;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 0.9rem;
+}
+
+.spinner {
+  display: none;
+  width: 22px; height: 22px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qr-wrap">
+  <div class="qr-card">
+    <h1><i class="fa-solid fa-qrcode" style="color:var(--primary);margin-right:10px;"></i>QR Code Generator</h1>
+    <p class="subtitle">Generate a scannable QR code from any text, URL, or data.</p>
+
+    <form id="qrForm">
+      <div class="form-group">
+        <label>Content</label>
+        <textarea id="qrData" name="data" placeholder="Enter a URL, text, phone number, email…" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Size (px)</label>
+        <input type="number" id="qrSize" name="size" value="300" min="100" max="1000" step="50">
+      </div>
+
+      <div class="color-row">
+        <div class="form-group">
+          <label>QR Color</label>
+          <div class="color-input-wrap">
+            <input type="color" id="fillColor" name="fill_color" value="#000000">
+            <span id="fillHex">#000000</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Background</label>
+          <div class="color-input-wrap">
+            <input type="color" id="backColor" name="back_color" value="#ffffff">
+            <span id="backHex">#ffffff</span>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-generate" id="genBtn">
+        <span id="btnText"><i class="fa-solid fa-qrcode"></i> Generate QR Code</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+    </form>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="qr-result" id="qrResult">
+      <img id="qrImage" src="" alt="Generated QR Code">
+      <div class="qr-actions">
+        <a id="downloadBtn" class="btn-dl" download="qrcode.png">
+          <i class="fa-solid fa-download"></i> Download PNG
+        </a>
+        <button class="btn-reset" id="resetBtn">
+          <i class="fa-solid fa-rotate-left"></i> Generate Another
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const form      = document.getElementById('qrForm');
+const genBtn    = document.getElementById('genBtn');
+const btnText   = document.getElementById('btnText');
+const spinner   = document.getElementById('spinner');
+const qrResult  = document.getElementById('qrResult');
+const qrImage   = document.getElementById('qrImage');
+const dlBtn     = document.getElementById('downloadBtn');
+const resetBtn  = document.getElementById('resetBtn');
+const errorMsg  = document.getElementById('errorMsg');
+const fillColor = document.getElementById('fillColor');
+const backColor = document.getElementById('backColor');
+
+// Live hex label update
+fillColor.addEventListener('input', () => {
+  document.getElementById('fillHex').textContent = fillColor.value;
+});
+backColor.addEventListener('input', () => {
+  document.getElementById('backHex').textContent = backColor.value;
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const data = document.getElementById('qrData').value.trim();
+  if (!data) {
+    showError('Please enter some content for the QR code.');
+    return;
+  }
+
+  // Loading state
+  genBtn.disabled = true;
+  btnText.style.display = 'none';
+  spinner.style.display = 'block';
+  errorMsg.style.display = 'none';
+  qrResult.style.display = 'none';
+
+  try {
+    const formData = new FormData(form);
+    formData.set('preview', '1');
+
+    const resp = await fetch('/generate-qr', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!resp.ok) {
+      // Try to parse JSON error
+      let msg = 'Failed to generate QR code.';
+      try {
+        const json = await resp.json();
+        msg = json.error || msg;
+      } catch (_) {}
+      showError(msg);
+      return;
+    }
+
+    // Response is the image blob
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+
+    qrImage.src = url;
+    dlBtn.href  = url;
+    qrResult.style.display = 'block';
+
+  } catch (err) {
+    showError('Network error. Please try again.');
+  } finally {
+    genBtn.disabled = false;
+    btnText.style.display = 'inline';
+    spinner.style.display = 'none';
+  }
+});
+
+resetBtn.addEventListener('click', () => {
+  qrResult.style.display = 'none';
+  document.getElementById('qrData').value = '';
+  document.getElementById('qrData').focus();
+});
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorMsg.style.display = 'block';
+}
+</script>
+{% endblock %}

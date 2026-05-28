@@ -1,0 +1,168 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Upscale Image - Document Utility Suite{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Upscale Image</h1>
+            <p>Increase the resolution of your images with high-quality resampling.</p>
+        </div>
+
+        <form action="/upscale-image" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept="image/*" style="display: none;" required>
+                <div class="upload-icon">
+                    <i class="fa-solid fa-expand"></i>
+                </div>
+                <h3>Select Image</h3>
+                <p>or drop image here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select Image
+                </button>
+            </div>
+
+            <div id="fileDisplay" style="display: none; margin-top: 2rem;">
+                <div class="file-item" id="selectedFile">
+                    <!-- File info inserted here -->
+                </div>
+            </div>
+
+            <div class="options-wrapper" id="optionsWrapper" style="display: none;">
+                <div class="options-grid">
+                    <div class="option-card active" onclick="selectScale(2, this)">
+                        <div class="option-title">2x Upscale</div>
+                        <div class="option-desc">Double the resolution (e.g. 500px to 1000px)</div>
+                    </div>
+                    <div class="option-card" onclick="selectScale(4, this)">
+                        <div class="option-title">4x Upscale</div>
+                        <div class="option-desc">Quadruple the resolution (e.g. 500px to 2000px)</div>
+                    </div>
+                </div>
+                <input type="hidden" name="scale_factor" id="scaleInput" value="2">
+
+                <div class="action-panel show" style="margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fa-solid fa-expand"></i>
+                        Upscale & Download
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<style>
+    .options-wrapper {
+        margin-top: 2rem;
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .option-card {
+        padding: 1.5rem;
+        border: 2px solid var(--border);
+        border-radius: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .option-card:hover {
+        border-color: var(--primary-light);
+    }
+
+    .option-card.active {
+        border-color: var(--primary);
+        background-color: var(--primary-light);
+        box-shadow: 0 0 0 1px var(--primary-mid);
+    }
+
+    .option-card.active .option-title {
+        color: #a5b4fc;
+    }
+
+    .option-title {
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .option-desc {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const optionsWrapper = document.getElementById('optionsWrapper');
+    const fileDisplay = document.getElementById('fileDisplay');
+    const selectedFile = document.getElementById('selectedFile');
+    const scaleInput = document.getElementById('scaleInput');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        selectedFile.innerHTML = `
+            <div class="file-item-info">
+                <div class="file-item-icon">
+                    <i class="fa-solid fa-file-image"></i>
+                </div>
+                <div class="file-item-details">
+                    <h4>${file.name}</h4>
+                    <p>${(file.size / 1024 / 1024).toFixed(2)} MB • Ready to upscale</p>
+                </div>
+            </div>
+            <div style="color: var(--success); font-size: 1.2rem;">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+        `;
+        fileDisplay.style.display = 'block';
+        optionsWrapper.style.display = 'block';
+    }
+
+    function selectScale(factor, element) {
+        scaleInput.value = factor;
+        document.querySelectorAll('.option-card').forEach(card => card.classList.remove('active'));
+        element.classList.add('active');
+    }
+</script>
+{% endblock %}

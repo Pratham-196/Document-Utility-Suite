@@ -1,0 +1,171 @@
+﻿{% extends 'base.html' %}
+{% block title %}Smart Document Brief — Document Utility Suite{% endblock %}
+{% block extra_css %}
+<style>
+.brief-section { margin-bottom:20px; }
+.brief-section-title {
+  font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text-disabled);margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.brief-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.brief-one-liner {
+  font-size:1.05rem;font-weight:700;color:var(--text-primary);
+  background:var(--primary-light);border:1px solid var(--primary-mid);
+  border-radius:12px;padding:16px 20px;margin-bottom:20px;line-height:1.5;
+}
+.brief-type-badge {
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--surface-hover);border:1px solid var(--border);
+  color:var(--text-secondary);padding:5px 14px;border-radius:999px;
+  font-size:0.8rem;font-weight:600;margin-bottom:16px;
+}
+.brief-tag-list { display:flex;flex-wrap:wrap;gap:8px; }
+.brief-tag {
+  background:var(--surface-hover);border:1px solid var(--border);
+  color:var(--text-secondary);padding:4px 12px;border-radius:8px;font-size:0.8rem;
+}
+.brief-tag.risk {
+  background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#fca5a5;
+}
+.brief-prose { font-size:0.875rem;color:var(--text-secondary);line-height:1.7; }
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-file-contract"></i></div>
+    <h1>Smart Document Brief</h1>
+    <p>Upload any document and get an instant AI intelligence report — type, purpose, key entities, dates, numbers, action items, and risk flags.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-file-contract"></i></div>
+      <p>Drop a document here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">PDF, Word, TXT supported</span>
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:28px;text-align:center">
+      <div style="width:48px;height:48px;border:3px solid var(--border-strong);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px"></div>
+      <p style="color:var(--text-tertiary);font-size:0.9rem">Analyzing document…</p>
+      <p style="color:var(--text-disabled);font-size:0.78rem;margin-top:4px">This may take 10–20 seconds</p>
+    </div>
+
+    <div id="briefResult" style="display:none;margin-top:28px"></div>
+  </div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+
+function analyze(file) {
+  document.getElementById('briefResult').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'block';
+  dropZone.style.opacity = '0.5';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  fetch('/document-brief', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('loadingState').style.display = 'none';
+      dropZone.style.opacity = '1';
+      if (data.error) { alert('Error: ' + data.error); return; }
+      renderBrief(data.brief, file.name);
+    })
+    .catch(() => {
+      document.getElementById('loadingState').style.display = 'none';
+      dropZone.style.opacity = '1';
+      alert('Failed to analyze document. Please try again.');
+    });
+}
+
+function renderBrief(b, filename) {
+  const el = document.getElementById('briefResult');
+
+  const tagList = arr => arr && arr.length
+    ? arr.map(t => `<span class="brief-tag">${esc(t)}</span>`).join('')
+    : '<span style="color:var(--text-disabled);font-size:0.8rem">None found</span>';
+
+  const riskList = arr => arr && arr.length
+    ? arr.map(t => `<span class="brief-tag risk"><i class="fa-solid fa-triangle-exclamation" style="font-size:0.65rem"></i> ${esc(t)}</span>`).join('')
+    : '<span style="color:var(--text-disabled);font-size:0.8rem">No risk flags detected</span>';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <span class="brief-type-badge"><i class="fa-solid fa-tag"></i> ${esc(b.document_type || 'Document')}</span>
+      <span style="font-size:0.78rem;color:var(--text-disabled)">${esc(filename)}</span>
+    </div>
+
+    <div class="brief-one-liner">${esc(b.one_liner || '')}</div>
+
+    <div class="brief-section">
+      <div class="brief-section-title">Purpose</div>
+      <p class="brief-prose">${esc(b.purpose || 'Not specified')}</p>
+    </div>
+
+    <div class="brief-section">
+      <div class="brief-section-title">Intended Audience</div>
+      <p class="brief-prose">${esc(b.audience || 'Not specified')}</p>
+    </div>
+
+    <div class="brief-section">
+      <div class="brief-section-title">Key Entities</div>
+      <div class="brief-tag-list">${tagList(b.key_entities)}</div>
+    </div>
+
+    <div class="brief-section">
+      <div class="brief-section-title">Key Dates</div>
+      <div class="brief-tag-list">${tagList(b.key_dates)}</div>
+    </div>
+
+    <div class="brief-section">
+      <div class="brief-section-title">Key Numbers & Figures</div>
+      <div class="brief-tag-list">${tagList(b.key_numbers)}</div>
+    </div>
+
+    <div class="brief-section">
+      <div class="brief-section-title">Action Items</div>
+      <div class="brief-tag-list">${tagList(b.action_items)}</div>
+    </div>
+
+    <div class="brief-section">
+      <div class="brief-section-title"><i class="fa-solid fa-triangle-exclamation" style="color:#f87171"></i> Risk Flags</div>
+      <div class="brief-tag-list">${riskList(b.risk_flags)}</div>
+    </div>
+
+    <div style="margin-top:20px;text-align:right">
+      <button onclick="window.location.reload()" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-rotate-left"></i> Analyze Another
+      </button>
+    </div>
+  `;
+  el.style.display = 'block';
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) analyze(fileInput.files[0]); });
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; analyze(f); }
+});
+</script>
+{% endblock %}

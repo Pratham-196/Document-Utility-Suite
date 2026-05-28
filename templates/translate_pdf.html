@@ -1,0 +1,237 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Translate PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/preview.css') }}">
+<style>
+    .options-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        border: 1px solid var(--border);
+        margin-top: 1.5rem;
+    }
+
+    .option-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .option-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-strong);
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        color: var(--text-primary);
+        background: var(--surface);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Translate PDF</h1>
+            <p>Translate your PDF documents into Indian languages while preserving the original content extraction.</p>
+        </div>
+
+        <form id="uploadForm" action="/translate-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-language"></i>
+                </div>
+                <h3>Select PDF</h3>
+                <p>or drop file here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select File
+                </button>
+            </div>
+
+            <div id="fileDisplay" style="display: none; margin-top: 2rem;">
+                <div class="file-item" id="selectedFile">
+                    <!-- File info inserted here -->
+                </div>
+
+                <div class="options-grid">
+                    <div class="option-group">
+                        <label for="targetLang">Target Language</label>
+                        <select name="target_lang" id="targetLang" class="option-select">
+                            {% for name, code in languages.items() %}
+                            <option value="{{ code }}" {% if code=='hi' %}selected{% endif %}>{{ name | capitalize }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-panel" id="actionPanel">
+                <button type="submit" class="btn btn-primary btn-lg" id="convertBtn">
+                    <i class="fa-solid fa-language"></i>
+                    Translate Now
+                </button>
+            </div>
+        </form>
+
+        <div id="loading" class="preview-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Translating document... This may take a moment depending on the length.</p>
+        </div>
+
+        <div id="resultSection" style="display: none;" class="preview-section">
+            <div class="preview-header">
+                <h3><i class="fa-solid fa-align-left"></i> Translated Text</h3>
+                <div class="preview-actions">
+                    <button class="btn btn-outline" onclick="copyText()">
+                        <i class="fa-regular fa-copy"></i> Copy
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadText()">
+                        <i class="fa-solid fa-download"></i> Download .txt
+                    </button>
+                </div>
+            </div>
+            <div class="preview-content">
+                <textarea id="resultText"
+                    style="width: 100%; min-height: 400px; padding: 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem; font-family: inherit; line-height: 1.6; font-size: 1.1rem; color: var(--text-primary); background: var(--surface);"
+                    readonly></textarea>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileDisplay = document.getElementById('fileDisplay');
+    const selectedFile = document.getElementById('selectedFile');
+    const form = document.getElementById('uploadForm');
+    const loading = document.getElementById('loading');
+    const convertBtn = document.getElementById('convertBtn');
+    const resultSection = document.getElementById('resultSection');
+    const resultText = document.getElementById('resultText');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (!file.name.endsWith('.pdf')) {
+            alert('Please select a PDF file.');
+            return;
+        }
+
+        selectedFile.innerHTML = `
+            <div class="file-item-info">
+                <div class="file-item-icon">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div class="file-item-details">
+                    <h4>${file.name}</h4>
+                    <p>${(file.size / 1024 / 1024).toFixed(2)} MB • Ready to translate</p>
+                </div>
+            </div>
+            <div style="color: var(--success); font-size: 1.2rem;">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+        `;
+        fileDisplay.style.display = 'block';
+        actionPanel.style.display = 'block';
+        actionPanel.classList.add('show');
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        if (!fileInput.files.length) return;
+
+        const formData = new FormData(form);
+
+        loading.style.display = 'block';
+        actionPanel.style.display = 'none';
+        resultSection.style.display = 'none';
+
+        try {
+            const response = await fetch('/translate-pdf', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.translation) {
+                    resultText.value = data.translation;
+                    resultSection.style.display = 'block';
+                    resultSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Error translating text: ' + (data.error || 'Unknown error'));
+                    actionPanel.style.display = 'block';
+                }
+            } else {
+                const errorText = await response.text();
+                alert('Error processing file: ' + errorText);
+                actionPanel.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred during translation.');
+            actionPanel.style.display = 'block';
+        } finally {
+            loading.style.display = 'none';
+        }
+    });
+
+    function copyText() {
+        resultText.select();
+        document.execCommand('copy');
+        alert('Translated text copied to clipboard!');
+    }
+
+    function downloadText() {
+        const text = resultText.value;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pdf_translation.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+</script>
+{% endblock %}

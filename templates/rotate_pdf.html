@@ -1,0 +1,287 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Rotate PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/preview.css">
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Rotate PDF</h1>
+            <p>Rotate PDF pages to portrait or landscape orientation permanently. You can even preview the results
+                before saving.</p>
+        </div>
+
+        <form id="uploadForm" action="/rotate-pdf" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" id="realFileInput" style="display: none;">
+
+            <div class="upload-area" id="dropZone">
+                <input type="file" id="tempFileInput" accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </div>
+                <h3>Select PDF file</h3>
+                <p>or drop PDF here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('tempFileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select PDF file
+                </button>
+            </div>
+
+            <div id="loader" style="display: none; text-align: center; padding: 3rem;">
+                <div class="loading-spinner"></div>
+                <p style="color: var(--text-secondary); font-weight: 500;">Loading preview...</p>
+            </div>
+
+            <div class="action-panel" id="actionPanel">
+                <div class="options-container"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+                    <div class="preview-card"
+                        style="background: var(--surface); border-radius: var(--radius-xl); padding: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow-md);">
+                        <h4 style="margin-bottom: 1rem; color: var(--dark); text-align: center;">Live Preview</h4>
+                        <div
+                            style="max-width: 100%; height: 350px; margin: 0 auto; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; background: #f1f5f9; overflow: hidden; border-radius: var(--radius-md);">
+                            <img id="previewImage"
+                                style="max-width: 90%; max-height: 90%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));"
+                                alt="PDF Preview">
+                        </div>
+                    </div>
+
+                    <div class="controls-card"
+                        style="background: var(--surface); border-radius: var(--radius-xl); padding: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow-md);">
+                        <h4 style="margin-bottom: 1rem; color: var(--dark);">Rotation Options</h4>
+                        <input type="hidden" name="angle" id="angleInput" value="90">
+
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+                            <div class="rotate-btn active" onclick="selectAngle(90, this)">
+                                <i class="fa-solid fa-rotate-right"></i>
+                                <span>90° Clockwise</span>
+                            </div>
+                            <div class="rotate-btn" onclick="selectAngle(180, this)">
+                                <i class="fa-solid fa-rotate"></i>
+                                <span>180° Upside Down</span>
+                            </div>
+                            <div class="rotate-btn" onclick="selectAngle(270, this)">
+                                <i class="fa-solid fa-rotate-left"></i>
+                                <span>90° Counter-Clockwise</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1.5rem; color: var(--text-light); font-size: 0.875rem;">
+                            <i class="fa-solid fa-circle-info"></i>
+                            Changes will be applied to all pages.
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <button type="submit" class="btn btn-primary btn-lg btn-block" style="width: 100%;">
+                                <i class="fa-solid fa-check"></i> Apply to All Pages
+                            </button>
+                            <button type="button" class="btn btn-outline btn-block" onclick="generateFullPreview()"
+                                id="fullPreviewBtn">
+                                <i class="fa-solid fa-eye"></i> View Full Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div id="previewContainer"></div>
+    </div>
+</section>
+
+<style>
+    .rotate-btn {
+        padding: 1.5rem 1rem;
+        border: 2px solid #e2e8f0;
+        border-radius: var(--radius-lg);
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .rotate-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at center, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .rotate-btn:hover,
+    .rotate-btn.active {
+        border-color: var(--primary);
+        background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+        color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    .rotate-btn:hover::before,
+    .rotate-btn.active::before {
+        opacity: 1;
+    }
+
+    .rotate-btn i {
+        font-size: 1.75rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .rotate-btn span {
+        font-weight: 600;
+        font-size: 0.875rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #e2e8f0;
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/preview.js"></script>
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const tempFileInput = document.getElementById('tempFileInput');
+    const realFileInput = document.getElementById('realFileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const angleInput = document.getElementById('angleInput');
+    const previewImage = document.getElementById('previewImage');
+    const loader = document.getElementById('loader');
+
+    let currentRotation = 90;
+    let currentFilename = '';
+    let previewInstance = null;
+
+    // Initialize full preview system
+    function initFullPreview() {
+        previewInstance = new RotatePreview('previewContainer', 'rotate');
+    }
+
+    // Generate full PDF preview
+    function generateFullPreview() {
+        if (currentFilename && previewInstance) {
+            const angle = angleInput.value;
+            previewInstance.generatePreview(currentFilename, { angle: angle });
+        }
+    }
+
+    function selectAngle(angle, btn) {
+        angleInput.value = angle;
+        document.querySelectorAll('.rotate-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        currentRotation = angle;
+        updatePreview();
+    }
+
+    function updatePreview() {
+        // Apply CSS transform to preview image
+        previewImage.style.transform = `rotate(${currentRotation}deg)`;
+    }
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    tempFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    async function handleFile(file) {
+        if (file.type !== 'application/pdf') {
+            alert('Please select a PDF file.');
+            return;
+        }
+
+        // Populate real input
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        realFileInput.files = dt.files;
+
+        dropZone.style.display = 'none';
+        loader.style.display = 'block';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+            const uploadData = await uploadRes.json();
+
+            if (uploadData.error) throw new Error(uploadData.error);
+            const filename = uploadData.filename;
+            currentFilename = filename;
+
+            // Load Page 1
+            previewImage.src = `/api/pdf-page/${filename}/1`;
+
+            // Initialize full preview system
+            initFullPreview();
+
+            previewImage.onerror = () => {
+                loader.style.display = 'none';
+                actionPanel.style.display = 'block';
+                actionPanel.classList.add('show');
+                previewImage.style.display = 'none';
+
+                const container = previewImage.parentElement;
+                container.innerHTML = '<div style="text-align: center; color: #64748b;"><i class="fa-solid fa-file-pdf" style="font-size: 3rem; margin-bottom: 1rem; color: #94a3b8;"></i><p>Preview unavailable<br><small>PDF processing tools not installed</small></p></div>';
+            };
+
+            // Wait for image to load before showing panel
+            previewImage.onload = () => {
+                loader.style.display = 'none';
+                actionPanel.style.display = 'block';
+                actionPanel.classList.add('show');
+                updatePreview(); // Apply initial rotation
+            };
+
+        } catch (err) {
+            console.error(err);
+            alert("Error loading preview: " + err.message);
+            loader.style.display = 'none';
+            dropZone.style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,196 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}OCR PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/preview.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>OCR PDF & Image</h1>
+            <p>Extract text from scanned PDF documents and images using AI-powered OCR.</p>
+        </div>
+
+        <form id="uploadForm" action="/ocr-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.tiff"
+                    style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-file-invoice"></i>
+                </div>
+                <h3>Select PDF or Image</h3>
+                <p>or drop file here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select File
+                </button>
+            </div>
+
+            <div id="fileDisplay" style="display: none; margin-top: 2rem;">
+                <div class="file-item" id="selectedFile">
+                    <!-- File info inserted here -->
+                </div>
+            </div>
+
+            <div class="action-panel" id="actionPanel">
+                <button type="submit" class="btn btn-primary btn-lg" id="convertBtn">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    Extract Text
+                </button>
+            </div>
+        </form>
+
+        <div id="loading" class="preview-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Scanning document... This may take a moment.</p>
+        </div>
+
+        <div id="resultSection" style="display: none;" class="preview-section">
+            <div class="preview-header">
+                <h3><i class="fa-solid fa-align-left"></i> Extracted Text</h3>
+                <div class="preview-actions">
+                    <button class="btn btn-outline" onclick="copyText()">
+                        <i class="fa-regular fa-copy"></i> Copy
+                    </button>
+                    <button class="btn btn-primary" onclick="downloadText()">
+                        <i class="fa-solid fa-download"></i> Download .txt
+                    </button>
+                </div>
+            </div>
+            <div class="preview-content">
+                <textarea id="resultText"
+                    style="width: 100%; min-height: 400px; padding: 1rem; border: 1px solid var(--border-strong); border-radius: 0.5rem; font-family: monospace; line-height: 1.5; background: var(--surface); color: var(--text-primary); resize: vertical;"
+                    readonly></textarea>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileDisplay = document.getElementById('fileDisplay');
+    const selectedFile = document.getElementById('selectedFile');
+    const form = document.getElementById('uploadForm');
+    const loading = document.getElementById('loading');
+    const convertBtn = document.getElementById('convertBtn');
+    const resultSection = document.getElementById('resultSection');
+    const resultText = document.getElementById('resultText');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        let icon = 'fa-file';
+        if (file.type.includes('pdf')) icon = 'fa-file-pdf';
+        else if (file.type.includes('image')) icon = 'fa-file-image';
+
+        selectedFile.innerHTML = `
+            <div class="file-item-info">
+                <div class="file-item-icon">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div class="file-item-details">
+                    <h4>${file.name}</h4>
+                    <p>${(file.size / 1024 / 1024).toFixed(2)} MB • Ready to process</p>
+                </div>
+            </div>
+            <div style="color: var(--success); font-size: 1.2rem;">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+        `;
+        fileDisplay.style.display = 'block';
+        actionPanel.style.display = 'block';
+        actionPanel.classList.add('show');
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        if (!fileInput.files.length) return;
+
+        const formData = new FormData(form);
+
+        loading.style.display = 'block';
+        actionPanel.style.display = 'none';
+        resultSection.style.display = 'none';
+
+        try {
+            const response = await fetch('/ocr-pdf', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.text) {
+                    resultText.value = data.text;
+                    resultSection.style.display = 'block';
+                    resultSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('No text extracted or error occurred.');
+                    actionPanel.style.display = 'block';
+                }
+            } else {
+                const errorText = await response.text();
+                alert('Error processing file: ' + errorText);
+                actionPanel.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while uploading.');
+            actionPanel.style.display = 'block';
+        } finally {
+            loading.style.display = 'none';
+        }
+    });
+
+    function copyText() {
+        resultText.select();
+        document.execCommand('copy');
+        alert('Text copied to clipboard!');
+    }
+
+    function downloadText() {
+        const text = resultText.value;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'extracted_text.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+</script>
+{% endblock %}

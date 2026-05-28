@@ -1,0 +1,126 @@
+﻿{% extends 'base.html' %}
+{% block title %}EXIF Viewer & Stripper — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-circle-info"></i></div>
+    <h1>EXIF Viewer & Stripper</h1>
+    <p>View embedded metadata from photos, or strip it for privacy.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
+      <p>Drop an image here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">JPG, PNG, TIFF supported</span>
+    </div>
+
+    <div id="resultArea" style="display:none;margin-top:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div>
+          <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);margin:0">Image Info</h3>
+          <span id="exifCountLabel" style="font-size:0.75rem;color:var(--text-tertiary)"></span>
+        </div>
+        <button id="stripBtn" class="btn btn-primary" style="font-size:0.85rem;padding:8px 18px">
+          <i class="fa-solid fa-eraser"></i> Strip Metadata & Download
+        </button>
+      </div>
+      <div id="exifTable" class="data-table-wrap"></div>
+    </div>
+
+    <div id="noExif" style="display:none;margin-top:20px;text-align:center;color:var(--text-tertiary);font-size:0.9rem">
+      <i class="fa-solid fa-circle-xmark" style="font-size:2rem;margin-bottom:10px;display:block;color:#f87171"></i>
+      Could not read this image file.
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:20px;text-align:center;color:var(--text-tertiary)">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:8px;display:block"></i>
+      Reading EXIF data...
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+let currentFile = null;
+
+function handleFile(file) {
+  if (!file) return;
+  currentFile = file;
+  document.getElementById('resultArea').style.display = 'none';
+  document.getElementById('noExif').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'block';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('action', 'view');
+
+  fetch('/exif-tool', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('loadingState').style.display = 'none';
+      if (data.error && !data.exif) {
+        document.getElementById('noExif').style.display = 'block';
+        return;
+      }
+      const exif = data.exif || {};
+      renderTable(exif);
+      document.getElementById('resultArea').style.display = 'block';
+      const count = data.count || Object.keys(exif).length;
+      document.getElementById('exifCountLabel').textContent =
+        count > 5 ? `${count} fields found (including EXIF metadata)` : `Basic image info only — no embedded EXIF metadata`;
+    })
+    .catch(() => {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('noExif').style.display = 'block';
+    });
+}
+
+function renderTable(exif) {
+  const rows = Object.entries(exif).map(([k, v]) =>
+    `<tr><td class="key-col">${k}</td><td>${String(v)}</td></tr>`
+  ).join('');
+  document.getElementById('exifTable').innerHTML =
+    `<table class="data-table"><thead><tr><th>Tag</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+document.getElementById('stripBtn').addEventListener('click', () => {
+  if (!currentFile) return;
+  const fd = new FormData();
+  fd.append('file', currentFile);
+  fd.append('action', 'strip');
+
+  fetch('/exif-tool', { method: 'POST', body: fd })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'stripped_' + currentFile.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+});
+
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; handleFile(f); }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+﻿{% extends 'base.html' %}
+{% block title %}Add Border - Document Utility Suite{% endblock %}
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Add Border to Image</h1>
+            <p>Add customizable borders to your images.</p>
+        </div>
+        <form action="/add-border" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Select Image</label>
+                <input type="file" name="file" class="form-control" accept="image/*" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="border_width">Border Width (px)</label>
+                    <input type="number" name="border_width" id="border_width" class="form-control" value="10" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="border_color">Border Color</label>
+                    <input type="color" name="border_color" id="border_color" class="form-control" value="#000000">
+                </div>
+            </div>
+            <div class="action-panel show">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa-solid fa-border-all"></i>
+                    Add Border
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

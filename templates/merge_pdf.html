@@ -1,0 +1,193 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Merge PDF Files - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/preview.css">
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Merge PDF Files</h1>
+            <p>Combine PDFs in the order you want with the easiest PDF merger available.</p>
+        </div>
+
+        <form id="uploadForm" action="/merge-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="files" id="fileInput" multiple accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                </div>
+                <h3>Select PDF files</h3>
+                <p>or drop PDFs here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select PDF files
+                </button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="action-panel" id="actionPanel">
+                <div class="preview-trigger">
+                    <button type="button" class="btn btn-outline btn-lg" onclick="generateMergePreview()"
+                        id="previewBtn" disabled>
+                        <i class="fa-solid fa-eye"></i> Preview Merged PDF
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fa-solid fa-code-merge"></i>
+                        Merge PDF
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Preview Container -->
+        <div id="previewContainer"></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/preview.js"></script>
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const actionPanel = document.getElementById('actionPanel');
+    const previewBtn = document.getElementById('previewBtn');
+
+    let filesArray = [];
+    let uploadedFilenames = [];
+    let previewInstance = null;
+
+    // Initialize preview system
+    function initPreview() {
+        previewInstance = new MergePreview('previewContainer', 'merge');
+    }
+
+    // Generate merge preview
+    async function generateMergePreview() {
+        if (previewInstance && uploadedFilenames.length >= 2) {
+            // Add all uploaded files to the preview instance
+            uploadedFilenames.forEach(filename => {
+                previewInstance.addFile(filename);
+            });
+            await previewInstance.generateMergePreview();
+        }
+    }
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            // Add to array and upload files
+            const dt = new DataTransfer();
+            // Add existing
+            for (let f of filesArray) dt.items.add(f);
+            // Add new
+            for (let f of files) {
+                if (f.type === 'application/pdf') {
+                    dt.items.add(f);
+                    filesArray.push(f);
+                    uploadFile(f); // Upload each file individually
+                }
+            }
+
+            fileInput.files = dt.files;
+            renderFileList();
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+
+            // Initialize preview system if not already done
+            if (!previewInstance) {
+                initPreview();
+            }
+        }
+    }
+
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.filename) {
+                uploadedFilenames.push(data.filename);
+                updatePreviewButton();
+            }
+        } catch (error) {
+            console.error('Upload failed:', error);
+        }
+    }
+
+    function updatePreviewButton() {
+        previewBtn.disabled = uploadedFilenames.length < 2;
+    }
+
+    function renderFileList() {
+        fileList.innerHTML = '';
+        filesArray.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = `
+                <div class="file-item-info">
+                    <div class="file-item-icon">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="file-item-details">
+                        <h4>${file.name}</h4>
+                        <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline" onclick="removeFile(${index})">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+            fileList.appendChild(item);
+        });
+    }
+
+    function removeFile(index) {
+        filesArray.splice(index, 1);
+        uploadedFilenames.splice(index, 1);
+
+        const dt = new DataTransfer();
+        for (let f of filesArray) dt.items.add(f);
+        fileInput.files = dt.files;
+
+        renderFileList();
+        updatePreviewButton();
+
+        if (filesArray.length === 0) {
+            actionPanel.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

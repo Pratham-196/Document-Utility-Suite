@@ -1,0 +1,488 @@
+﻿{% extends 'base.html' %}
+{% block title %}AI Question Generator - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Question type selector */
+.type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.type-card {
+    border: 2px solid var(--border-strong);
+    border-radius: 0.75rem;
+    padding: 1rem 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--surface);
+    color: var(--text-secondary);
+}
+
+.type-card:hover { border-color: var(--primary); }
+
+.type-card.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+
+.type-card i { font-size: 1.5rem; display: block; margin-bottom: 0.4rem; }
+.type-card span { font-size: 0.85rem; font-weight: 600; }
+
+/* Num selector pills */
+.num-pills {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.num-pill {
+    padding: 0.4rem 1.1rem;
+    border: 2px solid var(--border-strong);
+    border-radius: 9999px;
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.num-pill:hover { border-color: var(--primary); color: var(--primary); }
+.num-pill.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: transparent;
+}
+
+/* Question cards */
+.question-list { display: flex; flex-direction: column; gap: 1rem; }
+
+.q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.875rem;
+    padding: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.q-card:hover { box-shadow: var(--shadow-md); }
+
+.q-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.q-number {
+    min-width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.q-type-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.badge-mcq       { background: var(--surface-raised); color: var(--text-secondary); }
+.badge-short     { background: rgba(16,185,129,0.15); color: var(--accent); }
+.badge-truefalse { background: rgba(245,158,11,0.15); color: var(--warning); }
+
+.q-text { font-weight: 600; color: var(--text-primary); font-size: 1rem; line-height: 1.5; flex: 1; }
+
+/* MCQ options */
+.options-list { list-style: none; padding: 0; margin: 0.75rem 0; display: flex; flex-direction: column; gap: 0.4rem; }
+
+.option-item {
+    padding: 0.6rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    transition: background 0.15s;
+}
+
+.option-item.correct {
+    background: rgba(16,185,129,0.15);
+    border-color: rgba(16,185,129,0.4);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* Answer reveal */
+.answer-section { margin-top: 0.75rem; }
+
+.reveal-btn {
+    background: none;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    border-radius: 0.5rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reveal-btn:hover { background: var(--primary); color: #fff; }
+
+.answer-box {
+    display: none;
+    margin-top: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: rgba(16,185,129,0.1);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.answer-box.show { display: block; }
+.answer-label { font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 0.25rem; }
+.answer-text  { color: var(--text-primary); font-size: 0.95rem; margin-bottom: 0.5rem; }
+.explanation-text { color: var(--text-tertiary); font-size: 0.85rem; font-style: italic; }
+
+/* Stats bar */
+.stats-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.5rem;
+    background: var(--surface-raised);
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-chip { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--text-secondary); }
+.stat-chip strong { color: var(--primary); }
+
+/* Print / export */
+@media print {
+    .no-print { display: none !important; }
+    .answer-box { display: block !important; }
+    .reveal-btn { display: none !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1><i class="fa-solid fa-circle-question"></i> AI Question Generator</h1>
+            <p>Upload any document and instantly generate exam-ready questions — MCQ, short answer, or True/False.</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div id="uploadSection">
+            <form id="uploadForm" enctype="multipart/form-data">
+
+                <div class="upload-area" id="dropZone">
+                    <input type="file" id="fileInput" name="file"
+                        accept=".pdf,.pptx,.docx,.xlsx,.xls,.txt,.md,.csv,.json,.html,.htm"
+                        style="display: none;">
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <h3>Select a document</h3>
+                    <p>PDF, Word, PowerPoint, Excel, TXT and more</p>
+                    <button type="button" class="btn btn-primary btn-lg" id="selectFileBtn">
+                        <i class="fa-solid fa-folder-open"></i> Select Document
+                    </button>
+                </div>
+
+                <div class="file-list" id="fileList"></div>
+
+                <div class="action-panel" id="actionPanel" style="display: none;">
+
+                    <!-- Question Type -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <p style="font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem; text-align: center;">
+                            Question Type
+                        </p>
+                        <div class="type-grid">
+                            <div class="type-card" onclick="setType('mcq', this)">
+                                <i class="fa-solid fa-list-check"></i>
+                                <span>Multiple Choice</span>
+                            </div>
+                            <div class="type-card active" onclick="setType('mixed', this)">
+                                <i class="fa-solid fa-shuffle"></i>
+                                <span>Mixed</span>
+                            </div>
+                            <div class="type-card" onclick="setType('short', this)">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                <span>Short Answer</span>
+                            </div>
+                            <div class="type-card" onclick="setType('truefalse', this)">
+                                <i class="fa-solid fa-circle-half-stroke"></i>
+                                <span>True / False</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="qType" value="mixed">
+                    </div>
+
+                    <!-- Number of Questions -->
+                    <div style="margin-bottom: 1.5rem; text-align: center;">
+                        <p style="font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                            How many questions?
+                        </p>
+                        <div class="num-pills">
+                            <button type="button" class="num-pill" onclick="setNum(5, this)">5</button>
+                            <button type="button" class="num-pill active" onclick="setNum(10, this)">10</button>
+                            <button type="button" class="num-pill" onclick="setNum(15, this)">15</button>
+                            <button type="button" class="num-pill" onclick="setNum(20, this)">20</button>
+                        </div>
+                        <input type="hidden" id="numQuestions" value="10">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Questions
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="preview-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Analyzing document and generating questions...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="errorSection" style="display: none; margin-top: 1.5rem;">
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:0.75rem;padding:1.25rem;color:#dc2626;display:flex;align-items:center;gap:0.75rem;">
+                <i class="fa-solid fa-circle-exclamation" style="font-size:1.25rem;flex-shrink:0;"></i>
+                <span id="errorText"></span>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultSection" style="display: none; margin-top: 2rem;">
+            <div class="preview-section">
+                <div class="preview-header">
+                    <h3><i class="fa-solid fa-circle-question"></i> Generated Questions</h3>
+                    <div class="preview-actions">
+                        <button class="btn btn-outline btn-sm no-print" onclick="revealAll()">
+                            <i class="fa-solid fa-eye"></i> Show All Answers
+                        </button>
+                        <button class="btn btn-outline btn-sm no-print" onclick="window.print()">
+                            <i class="fa-solid fa-print"></i> Print
+                        </button>
+                        <button class="btn btn-outline btn-sm no-print" onclick="resetForm()">
+                            <i class="fa-solid fa-plus"></i> New
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row" id="statsRow"></div>
+
+                <!-- Questions -->
+                <div class="question-list" id="questionList"></div>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const fileInput    = document.getElementById('fileInput');
+    const dropZone     = document.getElementById('dropZone');
+    const selectBtn    = document.getElementById('selectFileBtn');
+    const fileList     = document.getElementById('fileList');
+    const actionPanel  = document.getElementById('actionPanel');
+    const uploadForm   = document.getElementById('uploadForm');
+    const loading      = document.getElementById('loading');
+    const errorSection = document.getElementById('errorSection');
+    const errorText    = document.getElementById('errorText');
+    const resultSection= document.getElementById('resultSection');
+
+    let questions = [];
+
+    // --- File Selection ---
+    selectBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        const allowed = ['.pdf','.pptx','.docx','.xlsx','.xls','.txt','.md','.csv','.json','.html','.htm'];
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowed.includes(ext)) {
+            showError('Unsupported file type. Please upload PDF, Word, PowerPoint, Excel, or text files.');
+            return;
+        }
+        fileList.innerHTML = `
+            <div class="file-item">
+                <div class="file-item-info">
+                    <div class="file-item-icon" style="background:var(--primary);">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                    <div class="file-item-details">
+                        <h4>${file.name}</h4>
+                        <p>${(file.size/1024/1024).toFixed(2)} MB</p>
+                    </div>
+                </div>
+            </div>`;
+        actionPanel.style.display = 'block';
+        actionPanel.classList.add('show');
+        hideError();
+    }
+
+    function setType(type, el) {
+        document.querySelectorAll('.type-card').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('qType').value = type;
+    }
+
+    function setNum(n, el) {
+        document.querySelectorAll('.num-pill').forEach(p => p.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('numQuestions').value = n;
+    }
+
+    // --- Submit ---
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!fileInput.files.length) { showError('Please select a file first.'); return; }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('num_questions', document.getElementById('numQuestions').value);
+        formData.append('q_type', document.getElementById('qType').value);
+
+        loading.style.display = 'block';
+        resultSection.style.display = 'none';
+        hideError();
+
+        try {
+            const res  = await fetch('/api/generate-questions', { method: 'POST', body: formData });
+            const data = await res.json();
+            loading.style.display = 'none';
+
+            if (data.status === 'success' && data.questions && data.questions.length > 0) {
+                questions = data.questions;
+                renderQuestions();
+                resultSection.style.display = 'block';
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                showError(data.error || 'Failed to generate questions. Please try again.');
+            }
+        } catch (err) {
+            loading.style.display = 'none';
+            showError('Network error: ' + err.message);
+        }
+    });
+
+    // --- Render ---
+    function renderQuestions() {
+        // Stats
+        const counts = { mcq: 0, short: 0, truefalse: 0 };
+        questions.forEach(q => { if (counts[q.type] !== undefined) counts[q.type]++; });
+        document.getElementById('statsRow').innerHTML = `
+            <div class="stat-chip"><i class="fa-solid fa-circle-question"></i> Total: <strong>${questions.length}</strong></div>
+            ${counts.mcq       ? `<div class="stat-chip"><i class="fa-solid fa-list-check"></i> MCQ: <strong>${counts.mcq}</strong></div>` : ''}
+            ${counts.short     ? `<div class="stat-chip"><i class="fa-solid fa-pen-to-square"></i> Short Answer: <strong>${counts.short}</strong></div>` : ''}
+            ${counts.truefalse ? `<div class="stat-chip"><i class="fa-solid fa-circle-half-stroke"></i> True/False: <strong>${counts.truefalse}</strong></div>` : ''}
+        `;
+
+        // Questions
+        document.getElementById('questionList').innerHTML = questions.map((q, i) => {
+            const badgeClass = { mcq: 'badge-mcq', short: 'badge-short', truefalse: 'badge-truefalse' }[q.type] || 'badge-mcq';
+            const badgeLabel = { mcq: 'MCQ', short: 'Short Answer', truefalse: 'True / False' }[q.type] || q.type;
+
+            let optionsHtml = '';
+            if (q.type === 'mcq' && q.options && q.options.length) {
+                const opts = q.options.map(opt => {
+                    const isCorrect = opt.trim() === q.answer.trim() ||
+                                      q.answer.trim().startsWith(opt.trim().charAt(0));
+                    return `<li class="option-item ${isCorrect ? 'correct' : ''}">${opt}</li>`;
+                }).join('');
+                optionsHtml = `<ul class="options-list">${opts}</ul>`;
+            }
+
+            return `
+            <div class="q-card">
+                <div class="q-header">
+                    <div class="q-number">${i + 1}</div>
+                    <div class="q-text">${q.question}</div>
+                    <span class="q-type-badge ${badgeClass}">${badgeLabel}</span>
+                </div>
+                ${optionsHtml}
+                <div class="answer-section">
+                    <button class="reveal-btn no-print" onclick="toggleAnswer(this)">
+                        <i class="fa-solid fa-eye"></i> Show Answer
+                    </button>
+                    <div class="answer-box">
+                        <div class="answer-label">Answer</div>
+                        <div class="answer-text">${q.answer}</div>
+                        ${q.explanation ? `<div class="explanation-text"><i class="fa-solid fa-lightbulb"></i> ${q.explanation}</div>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function toggleAnswer(btn) {
+        const box = btn.nextElementSibling;
+        const showing = box.classList.toggle('show');
+        btn.innerHTML = showing
+            ? '<i class="fa-solid fa-eye-slash"></i> Hide Answer'
+            : '<i class="fa-solid fa-eye"></i> Show Answer';
+    }
+
+    function revealAll() {
+        document.querySelectorAll('.answer-box').forEach(b => b.classList.add('show'));
+        document.querySelectorAll('.reveal-btn').forEach(b => {
+            b.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Hide Answer';
+        });
+    }
+
+    function resetForm() {
+        fileInput.value = '';
+        fileList.innerHTML = '';
+        actionPanel.style.display = 'none';
+        resultSection.style.display = 'none';
+        hideError();
+        questions = [];
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showError(msg) { errorText.textContent = msg; errorSection.style.display = 'block'; }
+    function hideError()    { errorSection.style.display = 'none'; }
+</script>
+{% endblock %}

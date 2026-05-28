@@ -1,0 +1,170 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Markdown to PDF - Document Utility Suite{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Markdown to PDF</h1>
+            <p>Convert Markdown text or files into professionally styled PDFs.</p>
+        </div>
+
+        <div class="tool-container">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('upload')">Upload File</button>
+                <button class="tab-btn" onclick="switchTab('paste')">Paste Text</button>
+            </div>
+
+            <div id="uploadTab" class="tab-content active">
+                <form action="/markdown-to-pdf" method="post" enctype="multipart/form-data" id="mdUploadForm">
+                    <input type="hidden" name="type" value="file">
+                    <div class="upload-area" id="dropZone">
+                        <input type="file" name="file" id="fileInput" accept=".md,.markdown,.txt"
+                            style="display: none;">
+                        <div class="upload-icon">
+                            <i class="fa-brands fa-markdown"></i>
+                        </div>
+                        <h3>Select Markdown file</h3>
+                        <p>or drop file here</p>
+                        <button type="button" class="btn btn-primary"
+                            onclick="document.getElementById('fileInput').click()">
+                            Browse Files
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="pasteTab" class="tab-content">
+                <form action="/markdown-to-pdf" method="post" id="mdPasteForm">
+                    <input type="hidden" name="type" value="text">
+                    <div class="input-card">
+                        <textarea name="content" id="mdContent" placeholder="# Your Markdown Here..."></textarea>
+                        <button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top: 1rem;">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            Convert to PDF
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="loadingState" style="display: none; text-align: center; margin-top: 2rem;">
+                <div class="loader"></div>
+                <p>Converting your Markdown...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .tool-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        background: var(--light-surface);
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+        background: var(--surface);
+        color: var(--primary);
+        box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .input-card {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+    }
+
+    textarea {
+        width: 100%;
+        height: 300px;
+        padding: 1rem;
+        border: 2px solid var(--border);
+        border-radius: var(--radius-md);
+        font-family: 'Courier New', Courier, monospace;
+        resize: vertical;
+        color: var(--text-primary);
+        background: var(--surface);
+    }
+
+    textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .btn-block {
+        width: 100%;
+    }
+
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<script>
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        if (tab === 'upload') {
+            document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+            document.getElementById('uploadTab').classList.add('active');
+        } else {
+            document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+            document.getElementById('pasteTab').classList.add('active');
+        }
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function () {
+        if (this.files.length > 0) {
+            document.getElementById('mdUploadForm').requestSubmit();
+            document.getElementById('loadingState').style.display = 'block';
+        }
+    });
+
+    document.getElementById('mdPasteForm').addEventListener('submit', function () {
+        document.getElementById('loadingState').style.display = 'block';
+    });
+</script>
+{% endblock %}

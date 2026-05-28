@@ -1,0 +1,123 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}JPG to PDF - Document Utility Suite{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Image to PDF</h1>
+            <p>Convert JPG, PNG, BMP, GIF, and TIFF images to PDF.</p>
+        </div>
+
+        <form id="uploadForm" action="/image-to-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="files" id="fileInput" multiple accept="image/*" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <h3>Select images</h3>
+                <p>or drop JPG, PNG, WEBP images here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select images
+                </button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="action-panel" id="actionPanel">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    Convert to PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const actionPanel = document.getElementById('actionPanel');
+    let filesArray = [];
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const dt = new DataTransfer();
+            for (let f of filesArray) dt.items.add(f);
+            for (let f of files) {
+                if (f.type.startsWith('image/')) {
+                    dt.items.add(f);
+                    filesArray.push(f);
+                }
+            }
+            fileInput.files = dt.files;
+            renderFileList();
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        }
+    }
+
+    function renderFileList() {
+        fileList.innerHTML = '';
+        filesArray.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = `
+                <div class="file-item-info">
+                    <div class="file-item-icon">
+                        <i class="fa-regular fa-image"></i>
+                    </div>
+                    <div class="file-item-details">
+                        <h4>${file.name}</h4>
+                        <p>${(file.size / 1024 / 1024).toFixed(2)} MB • ${file.type.split('/')[1].toUpperCase()}</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline" onclick="removeFile(${index})">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+            fileList.appendChild(item);
+        });
+    }
+
+    function removeFile(index) {
+        filesArray.splice(index, 1);
+
+        const dt = new DataTransfer();
+        for (let f of filesArray) dt.items.add(f);
+        fileInput.files = dt.files;
+
+        renderFileList();
+
+        if (filesArray.length === 0) {
+            actionPanel.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

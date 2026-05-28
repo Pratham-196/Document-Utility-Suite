@@ -1,0 +1,130 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Convert Image - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<style>
+    .format-selector {
+        max-width: 400px;
+        margin: 2rem auto;
+        background: var(--light-surface);
+        padding: 2rem;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        text-align: left;
+    }
+
+    .format-selector label {
+        display: block;
+        margin-bottom: 0.75rem;
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .format-selector select {
+        width: 100%;
+        padding: 0.875rem;
+        border: 2px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 1.1rem;
+        background: white;
+        color: #1e293b;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Convert Image</h1>
+            <p>Convert your images to JPG, PNG, or WEBP formats instantly.</p>
+        </div>
+
+        <form id="uploadForm" action="/convert-image" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept="image/*" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-repeat"></i>
+                </div>
+                <h3>Select Image</h3>
+                <p>or drop image here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">Select Image</button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="action-panel" id="actionPanel">
+                <div class="format-selector">
+                    <label><i class="fa-solid fa-file-export"></i> Convert format to:</label>
+                    <select name="format">
+                        <option value="jpg">JPG (High Compatibility)</option>
+                        <option value="png">PNG (Lossless Quality)</option>
+                        <option value="webp">WEBP (Optimized for Web)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Convert Image <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileList = document.getElementById('fileList');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (file.type.startsWith('image/')) {
+            fileList.innerHTML = `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <div class="file-item-icon" style="background: var(--gradient-secondary);">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                        <div class="file-item-details">
+                            <h4>${file.name}</h4>
+                            <p>${(file.size / 1024 / 1024).toFixed(2)} MB • ${file.type.split('/')[1].toUpperCase()}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        }
+    }
+</script>
+{% endblock %}

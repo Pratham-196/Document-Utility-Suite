@@ -1,0 +1,143 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Protect PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<style>
+    .password-card {
+        max-width: 500px;
+        margin: 2rem auto;
+        background: var(--light-surface);
+        padding: 2rem;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        text-align: left;
+    }
+
+    .password-card label {
+        display: block;
+        margin-bottom: 0.75rem;
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .password-card input {
+        width: 100%;
+        padding: 0.875rem;
+        border: 2px solid var(--border-strong);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        background: var(--surface);
+    }
+
+    .btn-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    @media (max-width: 480px) {
+        .btn-group {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Protect & Unlock PDF</h1>
+            <p>Encrypt your PDF with a password or remove protection from a PDF file.</p>
+        </div>
+
+        <form id="uploadForm" action="/protect-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3>Select PDF file</h3>
+                <p>or drop PDF here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">Select PDF file</button>
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="action-panel" id="actionPanel">
+                <div class="password-card">
+                    <label><i class="fa-solid fa-key"></i> Document Password</label>
+                    <input type="password" name="password" placeholder="Enter password..." required>
+
+                    <div class="btn-group">
+                        <button type="submit" name="action" value="protect" class="btn btn-primary">
+                            <i class="fa-solid fa-lock"></i> Protect PDF
+                        </button>
+                        <button type="submit" name="action" value="unlock" class="btn btn-outline">
+                            <i class="fa-solid fa-unlock"></i> Unlock PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileList = document.getElementById('fileList');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (file.type === 'application/pdf') {
+            fileList.innerHTML = `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <div class="file-item-icon">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <div class="file-item-details">
+                            <h4>${file.name}</h4>
+                            <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        }
+    }
+</script>
+{% endblock %}

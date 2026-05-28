@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DUS - All-in-One PDF & Image Tools{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo dus-logo">
+                <span class="dus-badge">
+                    <span class="dus-badge-text">DUS</span>
+                </span>
+                <span class="dus-title">Document Utility Suite</span>
+            </a>
+
+            <div class="nav-links">
+                <a href="/#tools" class="nav-item">All Tools</a>
+
+                <!-- PDF Tools Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-item nav-dropdown-btn">
+                        PDF Tools <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                    </button>
+                    <div class="nav-dropdown-menu">
+                      <div class="nav-dropdown-menu-inner cols-3">
+                        <div class="dropdown-col">
+                            <span class="dropdown-heading">Edit & Organise</span>
+                            <a href="/edit-pdf" class="dropdown-item"><i class="fa-solid fa-pen-nib"></i> PDF Editor</a>
+                            <a href="/merge-pdf" class="dropdown-item"><i class="fa-solid fa-object-group"></i> Merge PDF</a>
+                            <a href="/split-pdf" class="dropdown-item"><i class="fa-solid fa-scissors"></i> Split PDF</a>
+                            <a href="/compress-pdf" class="dropdown-item"><i class="fa-solid fa-file-zipper"></i> Compress PDF</a>
+                            <a href="/rotate-pdf" class="dropdown-item"><i class="fa-solid fa-rotate"></i> Rotate PDF</a>
+                            <a href="/crop-pdf" class="dropdown-item"><i class="fa-solid fa-crop"></i> Crop PDF</a>
+                            <a href="/extract-pages" class="dropdown-item"><i class="fa-solid fa-file-export"></i> Extract Pages</a>
+                            <a href="/reverse-pdf" class="dropdown-item"><i class="fa-solid fa-arrow-right-arrow-left"></i> Reverse PDF</a>
+                        </div>
+                        <div class="dropdown-col">
+                            <span class="dropdown-heading">Convert & Secure</span>
+                            <a href="/pdf-to-word" class="dropdown-item"><i class="fa-solid fa-file-word"></i> PDF to Word</a>
+                            <a href="/word-to-pdf" class="dropdown-item"><i class="fa-solid fa-file-pdf"></i> Word to PDF</a>
+                            <a href="/pdf-to-images" class="dropdown-item"><i class="fa-solid fa-images"></i> PDF to Images</a>
+                            <a href="/images-to-pdf" class="dropdown-item"><i class="fa-solid fa-layer-group"></i> Images to PDF</a>
+                            <a href="/protect-pdf" class="dropdown-item"><i class="fa-solid fa-lock"></i> Protect PDF</a>
+                            <a href="/unlock-pdf" class="dropdown-item"><i class="fa-solid fa-lock-open"></i> Unlock PDF</a>
+                            <a href="/watermark-pdf" class="dropdown-item"><i class="fa-solid fa-stamp"></i> Watermark PDF</a>
+                            <a href="/page-numbers" class="dropdown-item"><i class="fa-solid fa-list-ol"></i> Page Numbers</a>
+                        </div>
+                        <div class="dropdown-col">
+                            <span class="dropdown-heading">Analyse & Fix</span>
+                            <a href="/ocr-pdf" class="dropdown-item"><i class="fa-solid fa-eye"></i> OCR PDF</a>
+                            <a href="/pdf-to-text" class="dropdown-item"><i class="fa-solid fa-align-left"></i> PDF to Text</a>
+                            <a href="/pdf-to-csv" class="dropdown-item"><i class="fa-solid fa-table"></i> PDF Tables to CSV</a>
+                            <a href="/compare-pdf" class="dropdown-item"><i class="fa-solid fa-code-compare"></i> Compare PDF</a>
+                            <a href="/flatten-pdf" class="dropdown-item"><i class="fa-solid fa-layer-group"></i> Flatten PDF</a>
+                            <a href="/repair-pdf" class="dropdown-item"><i class="fa-solid fa-wrench"></i> Repair PDF</a>
+                            <a href="/normalize-pdf" class="dropdown-item"><i class="fa-solid fa-sliders"></i> Normalize PDF</a>
+                            <a href="/pdf-fonts" class="dropdown-item"><i class="fa-solid fa-font"></i> Font Inspector</a>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+
+                <!-- Image Tools Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-item nav-dropdown-btn">
+                        Image Tools <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                    </button>
+                    <div class="nav-dropdown-menu">
+                      <div class="nav-dropdown-menu-inner cols-2">
+                        <div class="dropdown-col">
+                            <span class="dropdown-heading">Edit</span>
+                            <a href="/crop-image" class="dropdown-item"><i class="fa-solid fa-crop"></i> Crop Image</a>
+                            <a href="/resize-image" class="dropdown-item"><i class="fa-solid fa-expand"></i> Resize Image</a>
+                            <a href="/image-filters" class="dropdown-item"><i class="fa-solid fa-wand-magic-sparkles"></i> Image Filters</a>
+                            <a href="/add-border" class="dropdown-item"><i class="fa-regular fa-square"></i> Add Border</a>
+                            <a href="/add-text-to-image" class="dropdown-item"><i class="fa-solid fa-font"></i> Add Text</a>
+                            <a href="/remove-background" class="dropdown-item"><i class="fa-solid fa-eraser"></i> Remove Background</a>
+                        </div>
+                        <div class="dropdown-col">
+                            <span class="dropdown-heading">Convert & Analyse</span>
+                            <a href="/convert-image" class="dropdown-item"><i class="fa-solid fa-arrows-rotate"></i> Convert Image</a>
+                            <a href="/upscale-image" class="dropdown-item"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Upscale Image</a>
+                            <a href="/image-to-base64" class="dropdown-item"><i class="fa-solid fa-code"></i> Image to Base64</a>
+                            <a href="/exif-tool" class="dropdown-item"><i class="fa-solid fa-circle-info"></i> EXIF Viewer</a>
+                            <a href="/create-collage" class="dropdown-item"><i class="fa-solid fa-table-cells"></i> Create Collage</a>
+                            <a href="/generate-qr" class="dropdown-item"><i class="fa-solid fa-qrcode"></i> QR Code Generator</a>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+
+                <!-- AI Tools Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-item nav-dropdown-btn">
+                        AI Tools <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                    </button>
+                    <div class="nav-dropdown-menu">
+                      <div class="nav-dropdown-menu-inner">
+                        <div class="dropdown-col">
+                            <span class="dropdown-heading">AI Features</span>
+                            <a href="/chat_document" class="dropdown-item"><i class="fa-solid fa-comments"></i> Chat with PDF</a>
+                            <a href="/summarize-pdf" class="dropdown-item"><i class="fa-solid fa-compress-arrows-alt"></i> Summarize PDF</a>
+                            <a href="/document-brief" class="dropdown-item"><i class="fa-solid fa-file-lines"></i> Document Brief</a>
+                            <a href="/rewrite-document" class="dropdown-item"><i class="fa-solid fa-pen-to-square"></i> AI Rewriter</a>
+                            <a href="/ocr-correct" class="dropdown-item"><i class="fa-solid fa-spell-check"></i> OCR Correction</a>
+                            <a href="/tone-analyzer" class="dropdown-item"><i class="fa-solid fa-chart-line"></i> Tone Analyzer</a>
+                            <a href="/ai-compare" class="dropdown-item"><i class="fa-solid fa-code-compare"></i> AI Doc Compare</a>
+                            <a href="/generate-flashcards" class="dropdown-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);flex-shrink:0"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="18" x2="12" y2="20"/></svg>
+                                Flashcard Generator
+                            </a>
+                            <a href="/generate-questions" class="dropdown-item"><i class="fa-solid fa-circle-question"></i> Question Generator</a>
+                            <a href="/resume-intelligence" class="dropdown-item"><i class="fa-solid fa-user-tie"></i> Resume Intelligence</a>
+                            <a href="/invoice-intelligence" class="dropdown-item"><i class="fa-solid fa-file-invoice-dollar"></i> Invoice Intelligence</a>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="nav-actions">
+                <div class="nav-search">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="navSearchInput" placeholder="Search tools..." autocomplete="off">
+                    <div id="navSearchDropdown" class="search-dropdown"></div>
+                </div>
+                <button id="darkModeToggle" class="nav-btn" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button id="historyToggle" class="nav-btn" title="Recent Files">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </button>
+                <span class="privacy-badge"><i class="fa-solid fa-shield-halved"></i> Privacy First</span>
+                <span id="quotaBadge" class="quota-badge" style="display:none" title="Daily AI API usage"></span>
+            </div>
+
+            <button class="mobile-menu-btn" onclick="toggleMenu()" title="Toggle Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <!-- Recent Files Sidebar -->
+            <div id="historySidebar" class="history-sidebar">
+                <div class="sidebar-header">
+                    <h3>Recent Files</h3>
+                    <button onclick="toggleHistory()" class="close-btn">&times;</button>
+                </div>
+                <div id="recentFilesList" class="sidebar-content">
+                    <!-- Files will be listed here -->
+                </div>
+                <div class="sidebar-footer">
+                    <button onclick="clearHistory()" class="btn btn-outline btn-sm">Clear All</button>
+                </div>
+            </div>
+
+            <div class="mobile-menu" id="mobileMenu">
+                <a href="/#tools" class="nav-item" onclick="toggleMenu()">All Tools</a>
+                <a href="/compress-pdf" class="nav-item" onclick="toggleMenu()">Compress PDF</a>
+                <a href="/merge-pdf" class="nav-item" onclick="toggleMenu()">Merge PDF</a>
+                <a href="/split-pdf" class="nav-item" onclick="toggleMenu()">Split PDF</a>
+                <a href="/extract-pages" class="nav-item" onclick="toggleMenu()">Extract Pages</a>
+                <a href="/crop-pdf" class="nav-item" onclick="toggleMenu()">Crop PDF</a>
+                <a href="/rotate-pdf" class="nav-item" onclick="toggleMenu()">Rotate PDF</a>
+                <a href="/compare-pdf" class="nav-item" onclick="toggleMenu()">Compare PDF</a>
+                <a href="/reverse-pdf" class="nav-item" onclick="toggleMenu()">Reverse PDF</a>
+                <a href="/pdf-reader" class="nav-item" onclick="toggleMenu()">PDF Reader</a>
+                <a href="/convert-image" class="nav-item" onclick="toggleMenu()">Convert Image</a>
+                <a href="/crop-image" class="nav-item" onclick="toggleMenu()">Crop Image</a>
+                <a href="/upscale-image" class="nav-item" onclick="toggleMenu()">Upscale Image</a>
+                <a href="/add-border" class="nav-item" onclick="toggleMenu()">Add Border</a>
+                <a href="/add-text-to-image" class="nav-item" onclick="toggleMenu()">Add Text</a>
+                <a href="/create-collage" class="nav-item" onclick="toggleMenu()">Create Collage</a>
+                <a href="/image-to-base64" class="nav-item" onclick="toggleMenu()">Image to Base64</a>
+                <a href="/edit-pdf" class="nav-item" onclick="toggleMenu()">Edit PDF</a>
+                <a href="/ocr-pdf" class="nav-item" onclick="toggleMenu()">OCR PDF</a>
+                <a href="/chat_document" class="nav-item" onclick="toggleMenu()">Chat with PDF</a>
+                <a href="/generate-flashcards" class="nav-item" onclick="toggleMenu()">Flashcard Generator</a>
+                <a href="/generate-questions" class="nav-item" onclick="toggleMenu()">Question Generator</a>
+                <a href="/document-brief" class="nav-item" onclick="toggleMenu()">Document Brief</a>
+                <a href="/rewrite-document" class="nav-item" onclick="toggleMenu()">AI Rewriter</a>
+                <a href="/ocr-correct" class="nav-item" onclick="toggleMenu()">OCR Correction</a>
+                <a href="/tone-analyzer" class="nav-item" onclick="toggleMenu()">Tone Analyzer</a>
+                <a href="/ai-compare" class="nav-item" onclick="toggleMenu()">AI Doc Compare</a>
+                <a href="/generate-qr" class="nav-item" onclick="toggleMenu()">QR Generator</a>
+                <a href="/resume-intelligence" class="nav-item" onclick="toggleMenu()">Resume Intelligence</a>
+                <a href="/invoice-intelligence" class="nav-item" onclick="toggleMenu()">Invoice Intelligence</a>
+                <a href="/flatten-pdf" class="nav-item" onclick="toggleMenu()">Flatten PDF</a>
+                <a href="/repair-pdf" class="nav-item" onclick="toggleMenu()">Repair PDF</a>
+                <a href="/unlock-pdf" class="nav-item" onclick="toggleMenu()">Unlock PDF</a>
+                <a href="/page-numbers" class="nav-item" onclick="toggleMenu()">Page Numbers</a>
+                <a href="/reverse-pdf" class="nav-item" onclick="toggleMenu()">Reverse PDF</a>
+                <a href="/pdf-fonts" class="nav-item" onclick="toggleMenu()">Font Inspector</a>
+                <a href="/normalize-pdf" class="nav-item" onclick="toggleMenu()">Normalize PDF</a>
+                <a href="/resize-image" class="nav-item" onclick="toggleMenu()">Resize Image</a>
+                <a href="/image-filters" class="nav-item" onclick="toggleMenu()">Image Filters</a>
+                <a href="/exif-tool" class="nav-item" onclick="toggleMenu()">EXIF Viewer</a>
+                <a href="/image-to-base64" class="nav-item" onclick="toggleMenu()">Image to Base64</a>
+                <a href="/pdf-to-text" class="nav-item" onclick="toggleMenu()">PDF to Text</a>
+                <a href="/pdf-to-csv" class="nav-item" onclick="toggleMenu()">PDF Tables to CSV</a>
+                <a href="/crop-pdf" class="nav-item" onclick="toggleMenu()">Crop PDF</a>
+                <a href="/batch-process" class="nav-item" onclick="toggleMenu()">Batch Process</a>
+            </div>
+        </div>
+    </nav>
+
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('active');
+        }
+
+        // Dropdown — mouseenter/leave for smooth switching, click for touch
+        (function() {
+            const dropdowns = document.querySelectorAll('.nav-dropdown');
+            let closeTimer = null;
+
+            dropdowns.forEach(dd => {
+                dd.addEventListener('mouseenter', () => {
+                    clearTimeout(closeTimer);
+                    // Close all others instantly, open this one
+                    dropdowns.forEach(d => { if (d !== dd) d.classList.remove('open'); });
+                    dd.classList.add('open');
+                });
+                dd.addEventListener('mouseleave', () => {
+                    closeTimer = setTimeout(() => dd.classList.remove('open'), 80);
+                });
+                dd.querySelector('.nav-dropdown-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = dd.classList.contains('open');
+                    dropdowns.forEach(d => d.classList.remove('open'));
+                    if (!isOpen) dd.classList.add('open');
+                });
+            });
+
+            document.addEventListener('click', () => {
+                dropdowns.forEach(d => d.classList.remove('open'));
+            });
+        })();
+
+        // Nav Search autocomplete
+        const searchInput = document.getElementById('navSearchInput');
+        const searchDropdown = document.getElementById('navSearchDropdown');
+        
+        // Gather all tools from DOM
+        const tools = [];
+        document.querySelectorAll('.dropdown-item').forEach(el => {
+            // Check if already contains to avoid duplicates if mobile menu has the same
+            const name = el.textContent.trim();
+            const url = el.getAttribute('href');
+            if (!tools.find(t => t.url === url)) {
+                tools.push({
+                    name: name,
+                    url: url,
+                    iconHTML: el.querySelector('i, svg')?.outerHTML || '<i class="fa-solid fa-wrench"></i>'
+                });
+            }
+        });
+
+        function renderSearch(query) {
+            if (!query) {
+                searchDropdown.classList.remove('active');
+                return;
+            }
+            const q = query.toLowerCase();
+            const matches = tools.filter(t => t.name.toLowerCase().includes(q));
+            
+            searchDropdown.innerHTML = '';
+            if (matches.length > 0) {
+                matches.forEach((m, idx) => {
+                    const a = document.createElement('a');
+                    a.href = m.url;
+                    a.className = 'search-item';
+                    if(idx === 0) a.classList.add('selected'); // Just for visual hit
+                    a.innerHTML = `${m.iconHTML} ${m.name}`;
+                    searchDropdown.appendChild(a);
+                });
+            } else {
+                searchDropdown.innerHTML = `<div class="search-empty">No tools found for "${query}"</div>`;
+            }
+            searchDropdown.classList.add('active');
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            renderSearch(e.target.value);
+        });
+        
+        searchInput.addEventListener('focus', (e) => {
+            if (e.target.value) renderSearch(e.target.value);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-search')) {
+                searchDropdown.classList.remove('active');
+            }
+        });
+        
+        searchInput.addEventListener('keydown', (e) => {
+            const items = searchDropdown.querySelectorAll('.search-item');
+            if(!items.length) return;
+            
+            let currentIdx = Array.from(items).findIndex(el => el.classList.contains('selected'));
+            
+            if(e.key === 'ArrowDown') {
+                e.preventDefault();
+                if(currentIdx < items.length - 1) currentIdx++;
+                items.forEach((el, i) => el.classList.toggle('selected', i === currentIdx));
+            } else if(e.key === 'ArrowUp') {
+                e.preventDefault();
+                if(currentIdx > 0) currentIdx--;
+                items.forEach((el, i) => el.classList.toggle('selected', i === currentIdx));
+            } else if(e.key === 'Enter') {
+                e.preventDefault();
+                if(currentIdx >= 0) {
+                    window.location.href = items[currentIdx].href;
+                }
+            }
+        });
+
+        // Light Mode Toggle (dark is default)
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const body = document.body;
+
+        function applyTheme() {
+            const isLight = localStorage.getItem('theme') === 'light';
+            body.classList.toggle('light-mode', isLight);
+            darkModeToggle.innerHTML = isLight
+                ? '<i class="fa-solid fa-moon"></i>'
+                : '<i class="fa-solid fa-sun"></i>';
+        }
+
+        applyTheme();
+
+        darkModeToggle.addEventListener('click', () => {
+            const isLight = localStorage.getItem('theme') === 'light';
+            localStorage.setItem('theme', isLight ? 'dark' : 'light');
+            applyTheme();
+        });
+
+        // Recent Files Logic
+        const historySidebar = document.getElementById('historySidebar');
+        const recentFilesList = document.getElementById('recentFilesList');
+
+        function toggleHistory() {
+            historySidebar.classList.toggle('active');
+            if (historySidebar.classList.contains('active')) {
+                renderHistory();
+            }
+        }
+
+        document.getElementById('historyToggle').addEventListener('click', toggleHistory);
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('fileHistory') || '[]');
+            if (history.length === 0) {
+                recentFilesList.innerHTML = '<p class="empty-state">No recent files</p>';
+                return;
+            }
+
+            recentFilesList.innerHTML = history.map(file => `
+                <div class="history-item">
+                    <div class="history-icon">
+                        <i class="fa-solid ${file.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-image'}"></i>
+                    </div>
+                    <div class="history-info">
+                        <div class="history-name">${file.name}</div>
+                        <div class="history-date">${file.date}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function clearHistory() {
+            // Clear local history first for immediate UI response
+            localStorage.setItem('fileHistory', '[]');
+            renderHistory();
+            
+            // Notify server to clean up actual uploaded files
+            try {
+                await fetch('/api/clear-uploads', { method: 'POST' });
+            } catch (error) {
+                console.error('Failed to clear server uploads:', error);
+            }
+        }
+
+        // Helper to add to history (called from tools)
+        function addToHistory(name, type) {
+            const history = JSON.parse(localStorage.getItem('fileHistory') || '[]');
+            const newItem = {
+                name: name,
+                type: type,
+                date: new Date().toLocaleTimeString(),
+                timestamp: Date.now()
+            };
+            history.unshift(newItem);
+            localStorage.setItem('fileHistory', JSON.stringify(history.slice(0, 10)));
+        }
+
+        // Global check for file processing
+        // Global check for file processing
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            const fileInput = form.querySelector('input[type="file"]');
+            const urlInput = form.querySelector('input[type="url"]');
+
+            if (fileInput && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const type = file.type.includes('pdf') ? 'pdf' : 'image';
+                addToHistory(file.name, type);
+            } else if (urlInput && urlInput.value) {
+                addToHistory(urlInput.value, 'pdf');
+            }
+        });
+    </script>
+
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <a href="/" class="logo footer-logo">EveryThing</a>
+                <p class="footer-tagline">Free Online Document Tools</p>
+            </div>
+            <div class="footer-nav">
+                <a href="/edit-pdf">Editor</a>
+                <a href="{{ url_for('merge_pdf_route') }}">Merge</a>
+                <a href="{{ url_for('compress_pdf_route') }}">Compress</a>
+                <a href="/upscale-image">Upscale</a>
+                <a href="/batch-process">Batch</a>
+            </div>
+            <div class="footer-bottom">
+                <p>EveryThing. Privacy Guaranteed.</p>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+
+    <script>
+        // AI Quota badge — only shows when usage >= 80%
+        async function checkQuota() {
+            try {
+                const r = await fetch('/api/ai-quota-status');
+                if (!r.ok) return;
+                const d = await r.json();
+                const badge = document.getElementById('quotaBadge');
+                if (d.warning) {
+                    badge.style.display = 'inline-flex';
+                    badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> AI ${d.used}/${d.limit} RPD`;
+                    badge.title = `Daily AI requests: ${d.used} used, ${d.remaining} remaining (resets at midnight). Cached responses: ${d.cached_responses || 0}`;
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) { /* silently ignore */ }
+        }
+        checkQuota();
+        setInterval(checkQuota, 60000); // refresh every minute
+
+        // Global debounce for AI submit buttons — prevents double API calls
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('button[data-ai-btn], #rewriteBtn, #analyzeBtn, #correctBtn, #compareBtn, #briefBtn');
+            if (!btn || btn.disabled) return;
+            btn.dataset._lastClick = Date.now();
+            setTimeout(() => {
+                if (btn.dataset._lastClick && Date.now() - btn.dataset._lastClick < 500) {
+                    // second click within 500ms — ignore
+                    e.stopImmediatePropagation();
+                }
+            }, 0);
+        }, true);
+    </script>
+</body>
+
+</html>

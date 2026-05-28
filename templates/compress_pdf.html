@@ -1,0 +1,141 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Compress PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/preview.css">
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Compress PDF</h1>
+            <p>Reduce PDF file size while maintaining optimal quality and readability.</p>
+        </div>
+
+        <form id="uploadForm" action="/compress-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-compress"></i>
+                </div>
+                <h3>Select PDF file</h3>
+                <p>or drop PDF here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select PDF file
+                </button>
+            </div>
+
+            <div id="fileDisplay" style="display: none; margin-top: 2rem;">
+                <div class="file-item" id="selectedFile">
+                    <!-- File info will be inserted here -->
+                </div>
+            </div>
+
+            <!-- PDF Preview Strip -->
+            <div id="pdfPreviewContainer"></div>
+
+            <div class="action-panel" id="actionPanel">
+                <div style="margin-bottom: 1.25rem;">
+                    <label class="form-label">Compression Level</label>
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <label style="cursor:pointer;">
+                            <input type="radio" name="quality" value="fast" style="margin-right:6px;">
+                            <span style="color:var(--text-primary); font-weight:600;">Fast</span>
+                            <span style="color:var(--text-tertiary); font-size:0.8rem; display:block;">Quick, moderate reduction</span>
+                        </label>
+                        <label style="cursor:pointer;">
+                            <input type="radio" name="quality" value="balanced" checked style="margin-right:6px;">
+                            <span style="color:var(--text-primary); font-weight:600;">Balanced</span>
+                            <span style="color:var(--text-tertiary); font-size:0.8rem; display:block;">Good size vs quality</span>
+                        </label>
+                        <label style="cursor:pointer;">
+                            <input type="radio" name="quality" value="maximum" style="margin-right:6px;">
+                            <span style="color:var(--text-primary); font-weight:600;">Maximum</span>
+                            <span style="color:var(--text-tertiary); font-size:0.8rem; display:block;">Smallest file, slower</span>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa-solid fa-compress"></i>
+                    Compress PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pdf-preview.js"></script>
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const fileDisplay = document.getElementById('fileDisplay');
+    const selectedFile = document.getElementById('selectedFile');
+
+    const pdfPreview = new PdfPreviewStrip('pdfPreviewContainer');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    async function handleFile(file) {
+        if (file.type === 'application/pdf') {
+            selectedFile.innerHTML = `
+                <div class="file-item-info">
+                    <div class="file-item-icon">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="file-item-details">
+                        <h4>${file.name}</h4>
+                        <p>${(file.size / 1024 / 1024).toFixed(2)} MB • Ready to compress</p>
+                    </div>
+                </div>
+                <div style="color: var(--success); font-size: 1.2rem;">
+                    <i class="fa-solid fa-check-circle"></i>
+                </div>
+            `;
+            fileDisplay.style.display = 'block';
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+
+            // Upload for preview
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const res  = await fetch('/api/upload', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.filename) pdfPreview.load(data.filename);
+            } catch(e) { console.warn('Preview upload failed', e); }
+        } else {
+            alert('Please select a PDF file.');
+        }
+    }
+</script>
+{% endblock %}

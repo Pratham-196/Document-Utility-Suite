@@ -1,0 +1,197 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Compare PDFs - Document Utility Suite{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1><i class="fa-solid fa-code-compare"></i> Compare PDFs</h1>
+            <p>Compare two PDF documents side-by-side and get a detailed difference report.</p>
+        </div>
+
+        <form id="uploadForm" action="/compare-pdf" method="post" enctype="multipart/form-data">
+            <!-- First PDF Upload -->
+            <div class="upload-section">
+                <h3 class="upload-label">First PDF Document</h3>
+                <div class="upload-area" id="dropZone1">
+                    <input type="file" name="file1" id="fileInput1" accept=".pdf" style="display: none;" required>
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <h3>Select first PDF</h3>
+                    <p>or drop PDF here</p>
+                    <button type="button" class="btn btn-primary btn-lg"
+                        onclick="document.getElementById('fileInput1').click()">
+                        <i class="fa-solid fa-folder-open"></i>
+                        Select First PDF
+                    </button>
+                </div>
+                <div class="file-preview" id="filePreview1"></div>
+            </div>
+
+            <!-- Second PDF Upload -->
+            <div class="upload-section">
+                <h3 class="upload-label">Second PDF Document</h3>
+                <div class="upload-area" id="dropZone2">
+                    <input type="file" name="file2" id="fileInput2" accept=".pdf" style="display: none;" required>
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <h3>Select second PDF</h3>
+                    <p>or drop PDF here</p>
+                    <button type="button" class="btn btn-primary btn-lg"
+                        onclick="document.getElementById('fileInput2').click()">
+                        <i class="fa-solid fa-folder-open"></i>
+                        Select Second PDF
+                    </button>
+                </div>
+                <div class="file-preview" id="filePreview2"></div>
+            </div>
+
+            <div class="action-panel" id="actionPanel" style="display: none;">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fa-solid fa-code-compare"></i>
+                    Compare PDFs
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<style>
+.upload-section { margin-bottom: 2rem; }
+
+.upload-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.file-preview { margin-top: 1rem; display: none; }
+.file-preview.show { display: block; }
+
+.file-item {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideIn 0.3s ease;
+}
+
+.file-item-info { display: flex; align-items: center; gap: 1rem; }
+
+.file-item-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--primary);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.file-item-details h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.file-item-details p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script>
+// File handling for first PDF
+const dropZone1 = document.getElementById('dropZone1');
+const fileInput1 = document.getElementById('fileInput1');
+const filePreview1 = document.getElementById('filePreview1');
+
+// File handling for second PDF
+const dropZone2 = document.getElementById('dropZone2');
+const fileInput2 = document.getElementById('fileInput2');
+const filePreview2 = document.getElementById('filePreview2');
+
+const actionPanel = document.getElementById('actionPanel');
+
+// Setup drag and drop for first PDF
+setupDragDrop(dropZone1, fileInput1, filePreview1, 1);
+setupDragDrop(dropZone2, fileInput2, filePreview2, 2);
+
+function setupDragDrop(dropZone, fileInput, filePreview, fileNumber) {
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type === 'application/pdf') {
+            fileInput.files = files;
+            displayFile(files[0], filePreview, dropZone);
+            checkBothFiles();
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            displayFile(e.target.files[0], filePreview, dropZone);
+            checkBothFiles();
+        }
+    });
+}
+
+function displayFile(file, previewElement, dropZone) {
+    previewElement.innerHTML = `
+        <div class="file-item">
+            <div class="file-item-info">
+                <div class="file-item-icon">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div class="file-item-details">
+                    <h4>${file.name}</h4>
+                    <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+            </div>
+            <div class="file-status">
+                <i class="fa-solid fa-check-circle" style="color: #10b981; font-size: 1.5rem;"></i>
+            </div>
+        </div>
+    `;
+    previewElement.classList.add('show');
+    dropZone.style.display = 'none';
+}
+
+function checkBothFiles() {
+    if (fileInput1.files.length > 0 && fileInput2.files.length > 0) {
+        actionPanel.style.display = 'block';
+        actionPanel.classList.add('show');
+    }
+}
+</script>
+{% endblock %}

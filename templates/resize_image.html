@@ -1,0 +1,92 @@
+﻿{% extends 'base.html' %}
+{% block title %}Resize Image — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div>
+    <h1>Resize Image</h1>
+    <p>Resize by exact pixel dimensions or percentage. Aspect ratio is preserved when only one dimension is set.</p>
+  </div>
+
+  <div class="tool-card">
+    <form action="/resize-image" method="post" enctype="multipart/form-data">
+      <div class="upload-area" id="dropZone">
+        <input type="file" name="file" id="fileInput" accept="image/*" style="display:none">
+        <div class="upload-icon"><i class="fa-regular fa-image"></i></div>
+        <p>Drop an image here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+        <span class="upload-hint">JPG, PNG, WEBP supported</span>
+        <div id="previewWrap" style="display:none;margin-top:16px">
+          <img id="imgPreview" style="max-width:100%;max-height:180px;border-radius:10px;border:1px solid var(--border)">
+          <p id="fileName" style="font-size:0.8rem;color:var(--text-tertiary);margin-top:8px"></p>
+        </div>
+      </div>
+
+      <div id="actionPanel" style="display:none;margin-top:24px">
+        <div style="display:flex;gap:6px;margin-bottom:20px">
+          <button type="button" class="tab-btn active" onclick="switchTab('px',this)">Pixels</button>
+          <button type="button" class="tab-btn" onclick="switchTab('pct',this)">Percentage</button>
+        </div>
+
+        <div class="resize-panel show" id="panel-px">
+          <div class="form-row" style="max-width:400px;margin:0 auto 12px">
+            <div class="form-group">
+              <label class="form-label">Width (px)</label>
+              <input type="number" name="width" id="widthInput" class="form-control" placeholder="e.g. 1920" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Height (px)</label>
+              <input type="number" name="height" id="heightInput" class="form-control" placeholder="e.g. 1080" min="1">
+            </div>
+          </div>
+          <p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:16px;text-align:center">Leave one blank to auto-scale and preserve aspect ratio.</p>
+        </div>
+
+        <div class="resize-panel" id="panel-pct">
+          <div class="form-group" style="max-width:200px;margin:0 auto 20px">
+            <label class="form-label">Scale (%)</label>
+            <input type="number" name="percentage" id="pctInput" class="form-control" placeholder="e.g. 50" min="1" max="400">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%">
+          <i class="fa-solid fa-up-right-and-down-left-from-center"></i> Resize Image
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+const fi = document.getElementById('fileInput');
+const dz = document.getElementById('dropZone');
+const ap = document.getElementById('actionPanel');
+const preview = document.getElementById('imgPreview');
+const previewWrap = document.getElementById('previewWrap');
+const fileName = document.getElementById('fileName');
+
+function showFile(f) {
+  fileName.textContent = f.name;
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; previewWrap.style.display = 'block'; };
+  reader.readAsDataURL(f);
+  ap.style.display = 'block';
+}
+
+fi.addEventListener('change', () => { if (fi.files[0]) showFile(fi.files[0]); });
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fi.files = dt.files; showFile(f); }
+});
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.resize-panel').forEach(p => p.classList.remove('show'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + id).classList.add('show');
+  if (id === 'pct') { document.getElementById('widthInput').value = ''; document.getElementById('heightInput').value = ''; }
+  else { document.getElementById('pctInput').value = ''; }
+}
+</script>{% endblock %}

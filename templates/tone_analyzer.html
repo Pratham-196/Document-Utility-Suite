@@ -1,0 +1,199 @@
+﻿{% extends 'base.html' %}
+{% block title %}Tone & Sentiment Analyzer — Document Utility Suite{% endblock %}
+{% block extra_css %}
+<style>
+.brief-tag {
+  background:var(--surface-hover);border:1px solid var(--border);
+  color:var(--text-secondary);padding:4px 12px;border-radius:8px;font-size:0.8rem;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){
+  #analysisResult > div:first-child,
+  #analysisResult > div:nth-child(2) { grid-template-columns:1fr!important; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-chart-bar"></i></div>
+    <h1>Tone &amp; Sentiment Analyzer</h1>
+    <p>Upload a document or paste text to get a full AI analysis — sentiment score, formality level, reading grade, tone tags, and flagged sentences.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="tab-row" style="display:flex;gap:8px;margin-bottom:20px">
+      <button class="tab-btn active" id="tabFile" onclick="switchTab('file')">
+        <i class="fa-solid fa-file-arrow-up"></i> Upload File
+      </button>
+      <button class="tab-btn" id="tabText" onclick="switchTab('text')">
+        <i class="fa-solid fa-keyboard"></i> Paste Text
+      </button>
+    </div>
+
+    <div id="filePanel">
+      <div class="upload-area" id="dropZone">
+        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt" style="display:none">
+        <div class="upload-icon"><i class="fa-solid fa-chart-bar"></i></div>
+        <p>Drop a document here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+        <span class="upload-hint">PDF, Word, TXT supported</span>
+      </div>
+    </div>
+
+    <div id="textPanel" style="display:none">
+      <textarea id="pasteText" class="form-control" style="height:200px;resize:vertical;color:var(--text-primary);background:var(--surface)"
+        placeholder="Paste your text here to analyze its tone and sentiment…"></textarea>
+      <div style="text-align:right;margin-top:10px">
+        <button id="analyzeTextBtn" class="btn btn-primary">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Analyze
+        </button>
+      </div>
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:28px;text-align:center">
+      <div style="width:48px;height:48px;border:3px solid var(--border-strong);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px"></div>
+      <p style="color:var(--text-tertiary);font-size:0.9rem">Analyzing tone and sentiment…</p>
+    </div>
+
+    <div id="analysisResult" style="display:none;margin-top:28px"></div>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.getElementById('filePanel').style.display = tab === 'file' ? '' : 'none';
+  document.getElementById('textPanel').style.display = tab === 'text' ? '' : 'none';
+  document.getElementById('tabFile').classList.toggle('active', tab === 'file');
+  document.getElementById('tabText').classList.toggle('active', tab === 'text');
+}
+
+function analyze(formData) {
+  document.getElementById('analysisResult').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'block';
+
+  fetch('/tone-analyzer', { method: 'POST', body: formData })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('loadingState').style.display = 'none';
+      if (data.error) { alert('Error: ' + data.error); return; }
+      renderResult(data.result);
+    })
+    .catch(() => {
+      document.getElementById('loadingState').style.display = 'none';
+      alert('Request failed. Please try again.');
+    });
+}
+
+document.getElementById('fileInput').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  const fd = new FormData();
+  fd.append('file', this.files[0]);
+  analyze(fd);
+});
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); document.getElementById('fileInput').files = dt.files; const fd = new FormData(); fd.append('file', f); analyze(fd); }
+});
+
+document.getElementById('analyzeTextBtn').addEventListener('click', () => {
+  const text = document.getElementById('pasteText').value.trim();
+  if (!text) { alert('Please paste some text first.'); return; }
+  const fd = new FormData();
+  fd.append('text', text);
+  analyze(fd);
+});
+
+function sentimentColor(score) {
+  if (score > 30) return '#34d399';
+  if (score < -30) return '#f87171';
+  return '#fbbf24';
+}
+
+function renderResult(a) {
+  const el = document.getElementById('analysisResult');
+  const score = a.sentiment_score || 0;
+  const fScore = a.formality_score || 50;
+  const sColor = sentimentColor(score);
+
+  const tagList = (arr) => arr && arr.length
+    ? arr.map(t => `<span class="brief-tag">${esc(t)}</span>`).join('')
+    : '<span style="color:var(--text-disabled);font-size:0.8rem">None</span>';
+
+  const flagged = a.flagged_sentences && a.flagged_sentences.length
+    ? a.flagged_sentences.map(f => `
+        <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px 14px;margin-bottom:8px">
+          <div style="font-size:0.82rem;color:var(--text-secondary);font-style:italic;margin-bottom:5px">"${esc(f.sentence)}"</div>
+          <div style="font-size:0.72rem;color:#fca5a5"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(f.reason)}</div>
+        </div>`).join('')
+    : '<span style="color:var(--text-disabled);font-size:0.8rem">No flagged sentences</span>';
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+      <div style="background:var(--surface-hover);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:8px">Sentiment</div>
+        <div style="font-size:2rem;font-weight:900;color:${sColor}">${score > 0 ? '+' : ''}${score}</div>
+        <div style="font-size:0.8rem;color:var(--text-tertiary);margin-top:4px">${esc(a.overall_sentiment || '')}</div>
+      </div>
+      <div style="background:var(--surface-hover);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:8px">Formality</div>
+        <div style="font-size:2rem;font-weight:900;color:#818cf8">${fScore}</div>
+        <div style="font-size:0.8rem;color:var(--text-tertiary);margin-top:4px">${esc(a.formality || '')}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+      <div style="background:var(--surface-hover);border:1px solid var(--border);border-radius:12px;padding:14px">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:6px">Reading Level</div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">${esc(a.reading_level || 'N/A')}</div>
+      </div>
+      <div style="background:var(--surface-hover);border:1px solid var(--border);border-radius:12px;padding:14px">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:6px">Reading Time</div>
+        <div style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">${esc(String(a.reading_time_minutes || '?'))} min</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:10px;display:flex;align-items:center;gap:8px">Tone Tags <span style="flex:1;height:1px;background:var(--border)"></span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${tagList(a.tone_tags)}</div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:10px;display:flex;align-items:center;gap:8px">Summary <span style="flex:1;height:1px;background:var(--border)"></span></div>
+      <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.7">${esc(a.summary || '')}</p>
+    </div>
+
+    <div>
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#f87171"></i> Flagged Sentences
+        <span style="flex:1;height:1px;background:var(--border)"></span>
+      </div>
+      ${flagged}
+    </div>
+
+    <div style="margin-top:20px;text-align:right">
+      <button onclick="window.location.reload()" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-rotate-left"></i> Analyze Another
+      </button>
+    </div>
+  `;
+  el.style.display = 'block';
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+{% endblock %}

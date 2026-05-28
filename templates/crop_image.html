@@ -1,0 +1,182 @@
+﻿{% extends 'base.html' %}
+{% block title %}Crop Image — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-crop"></i></div>
+    <h1>Crop Image</h1>
+    <p>Drag to select a crop area, or enter exact pixel coordinates.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone" style="margin-bottom:0">
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
+      <p>Drop an image here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">JPG, PNG, WEBP supported</span>
+    </div>
+
+    <div id="cropArea" style="display:none;margin-top:24px">
+      <!-- Canvas crop UI -->
+      <div style="position:relative;display:inline-block;max-width:100%;overflow:hidden;border-radius:10px;border:1px solid var(--border);cursor:crosshair" id="canvasWrap">
+        <canvas id="cropCanvas"></canvas>
+        <div id="selBox" style="position:absolute;border:2px solid #6366f1;background:rgba(99,102,241,0.12);pointer-events:none;display:none"></div>
+      </div>
+
+      <div style="margin-top:18px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <div class="form-group">
+          <label class="form-label">Left (px)</label>
+          <input type="number" id="cropL" class="form-control" value="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Top (px)</label>
+          <input type="number" id="cropT" class="form-control" value="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Right (px)</label>
+          <input type="number" id="cropR" class="form-control" value="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bottom (px)</label>
+          <input type="number" id="cropB" class="form-control" value="0" min="0">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button id="cropBtn" class="btn btn-primary btn-lg" style="flex:1">
+          <i class="fa-solid fa-crop"></i> Crop & Download
+        </button>
+        <button id="resetBtn" class="btn btn-outline" onclick="resetSelection()">
+          <i class="fa-solid fa-rotate-left"></i> Reset
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fileInput  = document.getElementById('fileInput');
+const dropZone   = document.getElementById('dropZone');
+const cropArea   = document.getElementById('cropArea');
+const canvas     = document.getElementById('cropCanvas');
+const ctx        = canvas.getContext('2d');
+const selBox     = document.getElementById('selBox');
+const canvasWrap = document.getElementById('canvasWrap');
+
+let img = new Image();
+let naturalW = 0, naturalH = 0;
+let scale = 1;
+let isDragging = false, startX = 0, startY = 0, endX = 0, endY = 0;
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.onload = () => {
+      naturalW = img.naturalWidth;
+      naturalH = img.naturalHeight;
+      // Scale to fit max 700px wide
+      const maxW = Math.min(700, window.innerWidth - 80);
+      scale = naturalW > maxW ? maxW / naturalW : 1;
+      canvas.width  = Math.round(naturalW * scale);
+      canvas.height = Math.round(naturalH * scale);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      document.getElementById('cropR').value = naturalW;
+      document.getElementById('cropB').value = naturalH;
+      dropZone.style.display = 'none';
+      cropArea.style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Canvas drag selection
+canvasWrap.addEventListener('mousedown', e => {
+  const r = canvas.getBoundingClientRect();
+  startX = e.clientX - r.left;
+  startY = e.clientY - r.top;
+  isDragging = true;
+  selBox.style.display = 'block';
+});
+
+canvasWrap.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const r = canvas.getBoundingClientRect();
+  endX = Math.max(0, Math.min(e.clientX - r.left, canvas.width));
+  endY = Math.max(0, Math.min(e.clientY - r.top, canvas.height));
+  const l = Math.min(startX, endX), t = Math.min(startY, endY);
+  const w = Math.abs(endX - startX), h = Math.abs(endY - startY);
+  selBox.style.left = l + 'px'; selBox.style.top = t + 'px';
+  selBox.style.width = w + 'px'; selBox.style.height = h + 'px';
+  // Update inputs (convert back to natural coords)
+  document.getElementById('cropL').value = Math.round(l / scale);
+  document.getElementById('cropT').value = Math.round(t / scale);
+  document.getElementById('cropR').value = Math.round((l + w) / scale);
+  document.getElementById('cropB').value = Math.round((t + h) / scale);
+});
+
+canvasWrap.addEventListener('mouseup', () => { isDragging = false; });
+
+// Sync inputs → selection box
+['cropL','cropT','cropR','cropB'].forEach(id => {
+  document.getElementById(id).addEventListener('input', syncBoxFromInputs);
+});
+
+function syncBoxFromInputs() {
+  const l = +document.getElementById('cropL').value * scale;
+  const t = +document.getElementById('cropT').value * scale;
+  const r = +document.getElementById('cropR').value * scale;
+  const b = +document.getElementById('cropB').value * scale;
+  selBox.style.left = l + 'px'; selBox.style.top = t + 'px';
+  selBox.style.width = (r - l) + 'px'; selBox.style.height = (b - t) + 'px';
+  selBox.style.display = 'block';
+}
+
+function resetSelection() {
+  selBox.style.display = 'none';
+  document.getElementById('cropL').value = 0;
+  document.getElementById('cropT').value = 0;
+  document.getElementById('cropR').value = naturalW;
+  document.getElementById('cropB').value = naturalH;
+}
+
+document.getElementById('cropBtn').addEventListener('click', () => {
+  const l = +document.getElementById('cropL').value;
+  const t = +document.getElementById('cropT').value;
+  const r = +document.getElementById('cropR').value;
+  const b = +document.getElementById('cropB').value;
+  if (r <= l || b <= t) { alert('Invalid crop selection.'); return; }
+
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fd.append('left', l); fd.append('top', t);
+  fd.append('right', r); fd.append('bottom', b);
+
+  document.getElementById('cropBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+  fetch('/crop-image', { method: 'POST', body: fd })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'cropped_' + (fileInput.files[0]?.name || 'image.jpg');
+      a.click(); URL.revokeObjectURL(url);
+      document.getElementById('cropBtn').innerHTML = '<i class="fa-solid fa-crop"></i> Crop & Download';
+    })
+    .catch(() => {
+      alert('Crop failed. Please try again.');
+      document.getElementById('cropBtn').innerHTML = '<i class="fa-solid fa-crop"></i> Crop & Download';
+    });
+});
+
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; handleFile(f); }
+});
+</script>
+{% endblock %}

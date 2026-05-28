@@ -1,0 +1,138 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Excel to PDF - Document Utility Suite{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Excel to PDF</h1>
+            <p>Convert Excel spreadsheets and CSV files into PDF tables.</p>
+        </div>
+
+        <div class="tool-container">
+            <form action="/excel-to-pdf" method="post" enctype="multipart/form-data" id="excelForm">
+                <div class="upload-area" id="dropZone">
+                    <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-file-excel"></i>
+                    </div>
+                    <h3>Select Excel or CSV file</h3>
+                    <p>or drop file here</p>
+                    <button type="button" class="btn btn-primary btn-lg"
+                        onclick="document.getElementById('fileInput').click()">
+                        <i class="fa-solid fa-folder-open"></i>
+                        Select File
+                    </button>
+                </div>
+
+                <div class="options-card" id="optionsCard" style="display: none; margin-top: 1.5rem;">
+                    <h3>Conversion Options</h3>
+                    <div class="options-grid">
+                        <div class="option-item">
+                            <label>Orientation</label>
+                            <select name="orientation">
+                                <option value="landscape">Landscape (Recommended for wide tables)</option>
+                                <option value="portrait">Portrait</option>
+                            </select>
+                        </div>
+                        <div class="option-item">
+                            <label>Table Style</label>
+                            <select name="style">
+                                <option value="grid">Grid Border</option>
+                                <option value="minimal">Minimalist</option>
+                                <option value="striped">Striped Rows</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg btn-block">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        Convert to PDF
+                    </button>
+                </div>
+            </form>
+
+            <div id="loadingState" style="display: none; text-align: center; margin-top: 2rem;">
+                <div class="loader"></div>
+                <p>Processing your spreadsheet...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .tool-container {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .options-card {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border);
+    }
+
+    .options-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .option-item label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .option-item select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        background: var(--surface);
+    }
+
+    .btn-block { width: 100%; }
+
+    .loader {
+        border: 4px solid var(--border-strong);
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const optionsCard = document.getElementById('optionsCard');
+    const dropZone = document.getElementById('dropZone');
+
+    fileInput.addEventListener('change', function () {
+        if (this.files.length > 0) {
+            dropZone.style.display = 'none';
+            optionsCard.style.display = 'block';
+        }
+    });
+
+    document.getElementById('excelForm').addEventListener('submit', function () {
+        document.getElementById('loadingState').style.display = 'block';
+    });
+</script>
+{% endblock %}

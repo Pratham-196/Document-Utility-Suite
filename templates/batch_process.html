@@ -1,0 +1,465 @@
+﻿{% extends 'base.html' %}
+{% block title %}Batch Process — Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<style>
+.batch-hero {
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  padding: 48px 24px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.batch-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.5; pointer-events: none;
+}
+.batch-hero > * { position: relative; z-index: 1; }
+.batch-hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 900;
+  color: var(--text-primary); letter-spacing: -0.04em; margin-bottom: 10px;
+}
+.batch-hero p { color: var(--text-tertiary); font-size: 0.95rem; max-width: 480px; margin: 0 auto; }
+
+.batch-wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* Operation picker */
+.op-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.op-card {
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.op-card:hover { border-color: var(--primary-mid); background: var(--surface-raised); }
+.op-card.selected {
+  border-color: #6366f1;
+  background: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+.op-card i {
+  font-size: 1.3rem; color: #818cf8; margin-bottom: 8px; display: block;
+  transition: color 0.15s;
+}
+.op-card.selected i { color: #6366f1; }
+.op-card span { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; }
+
+/* Drop zone */
+.batch-drop {
+  border: 2px dashed var(--border-strong);
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 20px;
+}
+.batch-drop:hover, .batch-drop.over {
+  border-color: #6366f1;
+  background: var(--primary-light);
+}
+.batch-drop i { font-size: 2rem; color: var(--text-disabled); margin-bottom: 12px; display: block; transition: color 0.2s; }
+.batch-drop:hover i, .batch-drop.over i { color: #818cf8; }
+.batch-drop h3 { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.batch-drop p { font-size: 0.82rem; color: var(--text-tertiary); margin-bottom: 16px; }
+
+/* File list */
+.batch-file-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.batch-file-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  transition: border-color 0.15s;
+}
+.batch-file-item.done  { border-color: rgba(16,185,129,0.4); }
+.batch-file-item.error { border-color: rgba(239,68,68,0.4); }
+.batch-file-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--primary-light); color: #818cf8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; flex-shrink: 0;
+}
+.batch-file-info { flex: 1; min-width: 0; }
+.batch-file-name { font-size: 0.825rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.batch-file-size { font-size: 0.72rem; color: var(--text-tertiary); margin-top: 2px; }
+.batch-file-status { font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
+.batch-file-status.pending  { color: var(--text-disabled); }
+.batch-file-status.running  { color: #f59e0b; }
+.batch-file-status.done     { color: #10b981; }
+.batch-file-status.error    { color: #ef4444; }
+.batch-remove {
+  background: none; border: none; color: var(--text-disabled);
+  cursor: pointer; font-size: 0.9rem; padding: 4px;
+  border-radius: 6px; transition: all 0.15s; flex-shrink: 0;
+}
+.batch-remove:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+/* Progress bar */
+.batch-progress-wrap { margin-bottom: 20px; display: none; }
+.batch-progress-label { font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.batch-progress-bar { height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.batch-progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 999px; transition: width 0.3s ease; width: 0%; }
+
+/* Action row */
+.batch-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Options panel */
+.batch-options {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;
+  display: none;
+}
+.batch-options.show { display: block; }
+.batch-options h4 { font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.opt-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.opt-row label { font-size: 0.82rem; color: var(--text-secondary); font-weight: 500; }
+.opt-row select, .opt-row input[type="text"], .opt-row input[type="number"] {
+  background: var(--bg); border: 1.5px solid var(--border-strong);
+  border-radius: 8px; color: var(--text-primary); font-size: 0.82rem;
+  padding: 6px 10px; font-family: inherit;
+}
+.opt-row select:focus, .opt-row input:focus { outline: none; border-color: #6366f1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="batch-hero">
+  <h1><i class="fa-solid fa-layer-group" style="color:#818cf8;margin-right:10px;"></i>Batch Process</h1>
+  <p>Apply one operation to multiple files at once. Download all results as a ZIP.</p>
+</div>
+
+<div class="batch-wrap">
+
+  <!-- Step 1: Pick operation -->
+  <div style="margin-bottom:8px;">
+    <span style="font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);">1 — Choose Operation</span>
+  </div>
+  <div class="op-grid" id="opGrid">
+    <div class="op-card selected" data-op="compress">
+      <i class="fa-solid fa-compress"></i><span>Compress PDF</span>
+    </div>
+    <div class="op-card" data-op="rotate">
+      <i class="fa-solid fa-rotate-right"></i><span>Rotate PDF</span>
+    </div>
+    <div class="op-card" data-op="watermark">
+      <i class="fa-solid fa-stamp"></i><span>Watermark PDF</span>
+    </div>
+    <div class="op-card" data-op="split">
+      <i class="fa-solid fa-scissors"></i><span>Split PDF</span>
+    </div>
+    <div class="op-card" data-op="pdf-to-image">
+      <i class="fa-regular fa-image"></i><span>PDF to JPG</span>
+    </div>
+    <div class="op-card" data-op="compress-image">
+      <i class="fa-solid fa-minimize"></i><span>Compress Image</span>
+    </div>
+  </div>
+
+  <!-- Operation options -->
+  <div class="batch-options" id="batchOptions"></div>
+
+  <!-- Step 2: Upload files -->
+  <div style="margin-bottom:8px;">
+    <span style="font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);">2 — Add Files</span>
+  </div>
+  <div class="batch-drop" id="batchDrop">
+    <input type="file" id="batchFileInput" multiple style="display:none"
+      accept=".pdf,.jpg,.jpeg,.png,.webp">
+    <i class="fa-solid fa-cloud-arrow-up"></i>
+    <h3>Drop files here</h3>
+    <p>or click to browse — PDF, JPG, PNG, WEBP supported</p>
+    <button type="button" class="btn btn-primary" onclick="document.getElementById('batchFileInput').click()">
+      <i class="fa-solid fa-folder-open"></i> Choose Files
+    </button>
+  </div>
+
+  <!-- File list -->
+  <div class="batch-file-list" id="batchFileList"></div>
+
+  <!-- Progress -->
+  <div class="batch-progress-wrap" id="progressWrap">
+    <div class="batch-progress-label">
+      <span id="progressText">Processing…</span>
+      <span id="progressCount">0 / 0</span>
+    </div>
+    <div class="batch-progress-bar"><div class="batch-progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <!-- Actions -->
+  <div class="batch-actions" id="batchActions" style="display:none;">
+    <button class="btn btn-primary btn-lg" id="runBtn">
+      <i class="fa-solid fa-play"></i> Process All
+    </button>
+    <button class="btn btn-outline" id="clearBtn">
+      <i class="fa-solid fa-trash"></i> Clear
+    </button>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // ── State ──
+  let files = [];       // { file, name, size, status, itemEl }
+  let currentOp = 'compress';
+
+  // ── Operation options config ──
+  const opOptions = {
+    compress:       null,
+    rotate:         `<div class="opt-row"><label>Angle</label>
+                      <select id="opt-angle">
+                        <option value="90">90° clockwise</option>
+                        <option value="180">180°</option>
+                        <option value="270">270° (90° CCW)</option>
+                      </select></div>`,
+    watermark:      `<div class="opt-row"><label>Text</label>
+                      <input type="text" id="opt-wm-text" value="CONFIDENTIAL" style="width:200px">
+                      <label>Opacity</label>
+                      <input type="number" id="opt-wm-opacity" value="30" min="5" max="100" style="width:70px">%
+                    </div>`,
+    split:          null,
+    'pdf-to-image': null,
+    'compress-image': null,
+  };
+
+  const opAccept = {
+    compress: '.pdf', rotate: '.pdf', watermark: '.pdf',
+    split: '.pdf', 'pdf-to-image': '.pdf',
+    'compress-image': '.jpg,.jpeg,.png,.webp',
+  };
+
+  // ── DOM refs ──
+  const opGrid       = document.getElementById('opGrid');
+  const batchDrop    = document.getElementById('batchDrop');
+  const fileInput    = document.getElementById('batchFileInput');
+  const fileList     = document.getElementById('batchFileList');
+  const batchActions = document.getElementById('batchActions');
+  const runBtn       = document.getElementById('runBtn');
+  const clearBtn     = document.getElementById('clearBtn');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  const progressCount= document.getElementById('progressCount');
+  const optionsPanel = document.getElementById('batchOptions');
+
+  // ── Operation selection ──
+  opGrid.addEventListener('click', e => {
+    const card = e.target.closest('.op-card');
+    if (!card) return;
+    opGrid.querySelectorAll('.op-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    currentOp = card.dataset.op;
+    fileInput.accept = opAccept[currentOp] || '*';
+    renderOptions();
+    // clear files when op changes
+    files = []; renderFileList();
+  });
+
+  function renderOptions() {
+    const html = opOptions[currentOp];
+    if (html) {
+      optionsPanel.innerHTML = '<h4>Options</h4>' + html;
+      optionsPanel.classList.add('show');
+    } else {
+      optionsPanel.classList.remove('show');
+    }
+  }
+
+  // ── Drop zone ──
+  batchDrop.addEventListener('dragover', e => { e.preventDefault(); batchDrop.classList.add('over'); });
+  batchDrop.addEventListener('dragleave', () => batchDrop.classList.remove('over'));
+  batchDrop.addEventListener('drop', e => {
+    e.preventDefault(); batchDrop.classList.remove('over');
+    addFiles([...e.dataTransfer.files]);
+  });
+  batchDrop.addEventListener('click', e => {
+    if (!e.target.closest('button')) fileInput.click();
+  });
+  fileInput.addEventListener('change', () => { addFiles([...fileInput.files]); fileInput.value = ''; });
+
+  // ── File management ──
+  function addFiles(newFiles) {
+    newFiles.forEach(f => {
+      if (!files.find(x => x.name === f.name && x.size === f.size)) {
+        files.push({ file: f, name: f.name, size: f.size, status: 'pending' });
+      }
+    });
+    renderFileList();
+  }
+
+  function renderFileList() {
+    fileList.innerHTML = '';
+    files.forEach((f, i) => {
+      const el = document.createElement('div');
+      el.className = 'batch-file-item';
+      el.innerHTML = `
+        <div class="batch-file-icon"><i class="fa-solid ${f.name.endsWith('.pdf') ? 'fa-file-pdf' : 'fa-file-image'}"></i></div>
+        <div class="batch-file-info">
+          <div class="batch-file-name">${f.name}</div>
+          <div class="batch-file-size">${(f.size/1024).toFixed(1)} KB</div>
+        </div>
+        <span class="batch-file-status ${f.status}">${statusLabel(f.status)}</span>
+        <button class="batch-remove" data-i="${i}" title="Remove"><i class="fa-solid fa-xmark"></i></button>`;
+      f.itemEl = el;
+      fileList.appendChild(el);
+    });
+
+    fileList.querySelectorAll('.batch-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        files.splice(+btn.dataset.i, 1);
+        renderFileList();
+      });
+    });
+
+    batchActions.style.display = files.length ? 'flex' : 'none';
+  }
+
+  function statusLabel(s) {
+    return { pending: 'Pending', running: '⏳ Processing…', done: '✓ Done', error: '✗ Failed' }[s] || s;
+  }
+
+  function updateItem(f) {
+    if (!f.itemEl) return;
+    const s = f.itemEl.querySelector('.batch-file-status');
+    s.className = 'batch-file-status ' + f.status;
+    s.textContent = statusLabel(f.status);
+    f.itemEl.className = 'batch-file-item ' + (f.status === 'done' ? 'done' : f.status === 'error' ? 'error' : '');
+  }
+
+  // ── Run ──
+  runBtn.addEventListener('click', async () => {
+    if (!files.length) return;
+    runBtn.disabled = true;
+    clearBtn.disabled = true;
+    progressWrap.style.display = 'block';
+
+    const total = files.length;
+    let done = 0;
+    const zipParts = [];
+
+    for (const f of files) {
+      f.status = 'running'; updateItem(f);
+      progressText.textContent = `Processing ${f.name}…`;
+      progressCount.textContent = `${done} / ${total}`;
+
+      try {
+        const blob = await processFile(f.file);
+        if (blob) {
+          zipParts.push({ name: outName(f.name), blob });
+          f.status = 'done';
+        } else {
+          f.status = 'error';
+        }
+      } catch (e) {
+        f.status = 'error';
+      }
+
+      done++;
+      progressFill.style.width = (done / total * 100) + '%';
+      updateItem(f);
+      progressCount.textContent = `${done} / ${total}`;
+    }
+
+    progressText.textContent = 'Done! Building ZIP…';
+
+    if (zipParts.length) {
+      await downloadZip(zipParts);
+    }
+
+    runBtn.disabled = false;
+    clearBtn.disabled = false;
+    progressText.textContent = `Finished — ${zipParts.length} of ${total} succeeded.`;
+  });
+
+  clearBtn.addEventListener('click', () => {
+    files = []; renderFileList();
+    progressWrap.style.display = 'none';
+    progressFill.style.width = '0%';
+  });
+
+  // ── Process one file via existing routes ──
+  async function processFile(file) {
+    const fd = new FormData();
+    let url = '';
+
+    if (currentOp === 'compress') {
+      fd.append('file', file); url = '/compress-pdf';
+    } else if (currentOp === 'rotate') {
+      fd.append('file', file);
+      fd.append('angle', document.getElementById('opt-angle')?.value || '90');
+      url = '/rotate-pdf';
+    } else if (currentOp === 'watermark') {
+      fd.append('file', file);
+      fd.append('watermark_text', document.getElementById('opt-wm-text')?.value || 'CONFIDENTIAL');
+      fd.append('opacity', document.getElementById('opt-wm-opacity')?.value || '30');
+      url = '/watermark-pdf';
+    } else if (currentOp === 'split') {
+      fd.append('file', file); url = '/split-pdf';
+    } else if (currentOp === 'pdf-to-image') {
+      fd.append('file', file); url = '/pdf-to-image';
+    } else if (currentOp === 'compress-image') {
+      fd.append('file', file); url = '/compress-image';
+    }
+
+    const res = await fetch(url, { method: 'POST', body: fd });
+    if (!res.ok) return null;
+    return await res.blob();
+  }
+
+  function outName(original) {
+    const base = original.replace(/\.[^.]+$/, '');
+    const suffixes = {
+      compress: `${base}_compressed.pdf`,
+      rotate: `${base}_rotated.pdf`,
+      watermark: `${base}_watermarked.pdf`,
+      split: `${base}_split.zip`,
+      'pdf-to-image': `${base}_images.zip`,
+      'compress-image': `${base}_compressed${original.match(/\.[^.]+$/)?.[0] || '.jpg'}`,
+    };
+    return suffixes[currentOp] || original;
+  }
+
+  // ── Client-side ZIP using JSZip ──
+  async function downloadZip(parts) {
+    // Load JSZip on demand
+    if (!window.JSZip) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const zip = new JSZip();
+    for (const p of parts) {
+      zip.file(p.name, p.blob);
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `batch_results_${Date.now()}.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+})();
+</script>
+{% endblock %}

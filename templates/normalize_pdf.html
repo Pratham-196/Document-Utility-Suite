@@ -1,0 +1,57 @@
+﻿{% extends 'base.html' %}
+{% block title %}Normalize PDF Page Size — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-ruler-combined"></i></div>
+    <h1>Normalize PDF Page Size</h1>
+    <p>Force all pages to a standard size (A4, Letter, A3, Legal). Fixes mixed-size PDFs before printing or merging.</p>
+  </div>
+
+  <div class="tool-card">
+    <form action="/normalize-pdf" method="post" enctype="multipart/form-data">
+      <div class="upload-area" id="dropZone">
+        <input type="file" name="file" id="fileInput" accept=".pdf" style="display:none">
+        <div class="upload-icon"><i class="fa-solid fa-file-pdf"></i></div>
+        <p>Drop a PDF here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+        <span class="upload-hint">PDF files only</span>
+      </div>
+
+      <div id="actionPanel" style="display:none;margin-top:24px">
+        <div class="form-group" style="max-width:280px;margin:0 auto 20px">
+          <label class="form-label">Target Page Size</label>
+          <select name="page_size" class="form-control form-select">
+            <option value="A4">A4 (210 × 297 mm)</option>
+            <option value="Letter">Letter (8.5 × 11 in)</option>
+            <option value="A3">A3 (297 × 420 mm)</option>
+            <option value="Legal">Legal (8.5 × 14 in)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%">
+          <i class="fa-solid fa-ruler-combined"></i> Normalize Pages
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+const fi = document.getElementById('fileInput');
+const dz = document.getElementById('dropZone');
+const ap = document.getElementById('actionPanel');
+
+function showFile(f) {
+  dz.querySelector('p').textContent = f.name;
+  ap.style.display = 'block';
+}
+
+fi.addEventListener('change', () => { if (fi.files[0]) showFile(fi.files[0]); });
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fi.files = dt.files; showFile(f); }
+});
+</script>{% endblock %}

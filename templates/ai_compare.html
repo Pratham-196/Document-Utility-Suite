@@ -1,0 +1,205 @@
+﻿{% extends 'base.html' %}
+{% block title %}AI Document Comparison — Document Utility Suite{% endblock %}
+{% block extra_css %}
+<style>
+.change-card {
+  background:var(--surface-hover);border:1px solid var(--border);
+  border-radius:12px;padding:16px;margin-bottom:12px;
+}
+.change-section-label {
+  font-size:0.68rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--text-disabled);margin-bottom:10px;
+}
+.change-row { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px; }
+.change-box {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;font-size:0.8rem;color:var(--text-secondary);line-height:1.6;
+}
+.change-box.original { border-left:3px solid #f87171; }
+.change-box.revised  { border-left:3px solid #34d399; }
+.change-box-label { font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px; }
+.change-box.original .change-box-label { color:#f87171; }
+.change-box.revised  .change-box-label { color:#34d399; }
+.significance-note {
+  font-size:0.78rem;color:var(--text-tertiary);
+  background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.15);
+  border-radius:8px;padding:8px 12px;line-height:1.6;
+}
+.verdict-badge {
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--primary-light);border:1px solid var(--primary-mid);
+  color:#a5b4fc;padding:8px 18px;border-radius:999px;
+  font-size:0.82rem;font-weight:700;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:640px){
+  #uploadGrid{grid-template-columns:1fr!important}
+  .change-row{grid-template-columns:1fr!important}
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="tool-page" style="max-width:960px">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-code-compare"></i></div>
+    <h1>AI Document Comparison</h1>
+    <p>Upload two versions of a document and get an AI-powered explanation of what changed, why it matters, and an overall verdict.</p>
+  </div>
+
+  <div class="tool-card">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" id="uploadGrid">
+      <div>
+        <label class="form-label">Document 1 (Original)</label>
+        <div class="upload-area" id="drop1" style="padding:28px 20px">
+          <input type="file" id="file1" accept=".pdf,.doc,.docx,.txt" style="display:none">
+          <div class="upload-icon" style="font-size:1.8rem"><i class="fa-solid fa-file"></i></div>
+          <p style="font-size:0.82rem">Drop or <button type="button" class="link-btn" onclick="document.getElementById('file1').click()">browse</button></p>
+          <span class="upload-hint">PDF, Word, TXT</span>
+          <div id="name1" style="display:none;margin-top:8px;font-size:0.78rem;color:#34d399;font-weight:600"></div>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Document 2 (Revised)</label>
+        <div class="upload-area" id="drop2" style="padding:28px 20px">
+          <input type="file" id="file2" accept=".pdf,.doc,.docx,.txt" style="display:none">
+          <div class="upload-icon" style="font-size:1.8rem"><i class="fa-solid fa-file-pen"></i></div>
+          <p style="font-size:0.82rem">Drop or <button type="button" class="link-btn" onclick="document.getElementById('file2').click()">browse</button></p>
+          <span class="upload-hint">PDF, Word, TXT</span>
+          <div id="name2" style="display:none;margin-top:8px;font-size:0.78rem;color:#34d399;font-weight:600"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center">
+      <button id="compareBtn" class="btn btn-primary btn-lg" disabled>
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Compare with AI
+      </button>
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:28px;text-align:center">
+      <div style="width:48px;height:48px;border:3px solid var(--border-strong);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px"></div>
+      <p style="color:var(--text-tertiary);font-size:0.9rem">AI is comparing documents…</p>
+      <p style="color:var(--text-disabled);font-size:0.78rem;margin-top:4px">This may take 15–30 seconds</p>
+    </div>
+
+    <div id="compareResult" style="display:none;margin-top:28px"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let f1 = null, f2 = null;
+
+function setupDrop(dropId, inputId, nameId, num) {
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; setFile(f, num); }
+  });
+  input.addEventListener('change', () => { if (input.files[0]) setFile(input.files[0], num); });
+}
+
+function setFile(file, num) {
+  if (num === 1) f1 = file;
+  else f2 = file;
+  const nameEl = document.getElementById('name' + num);
+  nameEl.textContent = '✓ ' + file.name;
+  nameEl.style.display = 'block';
+  document.getElementById('compareBtn').disabled = !(f1 && f2);
+}
+
+setupDrop('drop1', 'file1', 'name1', 1);
+setupDrop('drop2', 'file2', 'name2', 2);
+
+document.getElementById('compareBtn').addEventListener('click', () => {
+  if (!f1 || !f2) return;
+  const fd = new FormData();
+  fd.append('file1', f1);
+  fd.append('file2', f2);
+
+  document.getElementById('compareResult').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('compareBtn').disabled = true;
+  document.getElementById('compareBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Comparing…';
+
+  fetch('/ai-compare', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('compareBtn').disabled = false;
+      document.getElementById('compareBtn').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Compare with AI';
+      if (data.error) { alert('Error: ' + data.error); return; }
+      renderResult(data.result);
+    })
+    .catch(() => {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('compareBtn').disabled = false;
+      document.getElementById('compareBtn').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Compare with AI';
+      alert('Request failed. Please try again.');
+    });
+});
+
+function renderResult(r) {
+  const el = document.getElementById('compareResult');
+
+  const changes = r.changes && r.changes.length
+    ? r.changes.map((c, i) => `
+        <div class="change-card">
+          <div class="change-section-label">Change ${i+1} — ${esc(c.section || 'General')}</div>
+          <div class="change-row">
+            <div class="change-box original">
+              <div class="change-box-label">Original</div>
+              ${esc(c.original || '')}
+            </div>
+            <div class="change-box revised">
+              <div class="change-box-label">Revised</div>
+              ${esc(c.revised || '')}
+            </div>
+          </div>
+          <div class="significance-note"><i class="fa-solid fa-circle-info" style="color:#818cf8;margin-right:6px"></i>${esc(c.significance || '')}</div>
+        </div>`).join('')
+    : '<p style="color:var(--text-disabled);font-size:0.85rem">No significant changes detected.</p>';
+
+  el.innerHTML = `
+    <div style="margin-bottom:20px">
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        Summary <span style="flex:1;height:1px;background:var(--border)"></span>
+      </div>
+      <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.7;margin-bottom:12px">${esc(r.summary || '')}</p>
+      <span class="verdict-badge"><i class="fa-solid fa-gavel"></i> ${esc(r.verdict || 'Analysis complete')}</span>
+    </div>
+
+    <div>
+      <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-disabled);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+        Detailed Changes (${r.changes ? r.changes.length : 0})
+        <span style="flex:1;height:1px;background:var(--border)"></span>
+      </div>
+      ${changes}
+    </div>
+
+    <div style="margin-top:20px;text-align:right">
+      <button onclick="window.location.reload()" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-rotate-left"></i> Compare Another
+      </button>
+    </div>
+  `;
+  el.style.display = 'block';
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+{% endblock %}

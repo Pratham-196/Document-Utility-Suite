@@ -1,0 +1,171 @@
+﻿{% extends 'base.html' %}
+{% block title %}Invoice Intelligence — Document Utility Suite{% endblock %}
+{% block extra_css %}
+<style>
+.inv-section { margin-bottom: 24px; }
+.inv-section-title {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-disabled); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.inv-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.inv-total-box {
+  font-size: 1.5rem; font-weight: 800; color: var(--primary);
+  background: var(--primary-light); border: 1px solid var(--primary-mid);
+  border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+}
+.inv-meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.inv-meta-card {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 16px;
+}
+.inv-meta-label { font-size: 0.7rem; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.inv-meta-value { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
+.inv-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.inv-table th { text-align: left; padding: 8px 12px; color: var(--text-disabled); font-size: 0.72rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.inv-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+.inv-table tr:last-child td { border-bottom: none; }
+.inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.inv-party-card {
+  background: var(--surface-hover); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.inv-party-label { font-size: 0.7rem; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.inv-party-name { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; margin-bottom: 4px; }
+.inv-party-detail { font-size: 0.8rem; color: var(--text-secondary); }
+@media (max-width: 600px) { .inv-parties { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+    <h1>Invoice Intelligence</h1>
+    <p>Upload an invoice (PDF or image) and instantly extract vendor, client, amounts, line items, and dates using AI.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+      <p>Drop an invoice here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">PDF, Word, TXT, PNG, JPG supported</span>
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:28px;text-align:center">
+      <div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px"></div>
+      <p style="color:var(--text-secondary);font-size:0.875rem">Extracting invoice data with AI…</p>
+    </div>
+
+    <div id="errorBox" style="display:none;margin-top:20px" class="alert alert-error"></div>
+    <div id="resultBox" style="display:none;margin-top:28px"></div>
+  </div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+const loading   = document.getElementById('loadingState');
+const errorBox  = document.getElementById('errorBox');
+const resultBox = document.getElementById('resultBox');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; analyze(); } });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) analyze(); });
+
+function analyze() {
+  const file = fileInput.files[0];
+  if (!file) return;
+  errorBox.style.display = 'none';
+  resultBox.style.display = 'none';
+  loading.style.display = 'block';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  fetch('/invoice-intelligence', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(res => {
+      loading.style.display = 'none';
+      if (res.error) { errorBox.textContent = res.error; errorBox.style.display = 'block'; return; }
+      renderResult(res.data);
+    })
+    .catch(() => { loading.style.display = 'none'; errorBox.textContent = 'Something went wrong. Please try again.'; errorBox.style.display = 'block'; });
+}
+
+function metaCard(label, value) {
+  if (!value) return '';
+  return `<div class="inv-meta-card"><div class="inv-meta-label">${label}</div><div class="inv-meta-value">${value}</div></div>`;
+}
+
+function renderResult(d) {
+  let html = '';
+
+  if (d.total_amount) {
+    html += `<div class="inv-total-box"><i class="fa-solid fa-circle-dollar-to-slot"></i> Total: ${d.total_amount} ${d.currency || ''}</div>`;
+  }
+
+  html += `<div class="inv-meta-grid">
+    ${metaCard('Invoice #', d.invoice_number)}
+    ${metaCard('Invoice Date', d.invoice_date)}
+    ${metaCard('Due Date', d.due_date)}
+    ${metaCard('Subtotal', d.subtotal)}
+    ${metaCard('Tax', d.tax)}
+    ${metaCard('Discount', d.discount)}
+    ${metaCard('Payment Method', d.payment_method)}
+  </div>`;
+
+  if ((d.vendor && d.vendor.name) || (d.client && d.client.name)) {
+    html += `<div class="inv-parties">`;
+    if (d.vendor) {
+      html += `<div class="inv-party-card">
+        <div class="inv-party-label">Vendor / Seller</div>
+        <div class="inv-party-name">${d.vendor.name || ''}</div>
+        ${d.vendor.address ? `<div class="inv-party-detail">${d.vendor.address}</div>` : ''}
+        ${d.vendor.email ? `<div class="inv-party-detail"><i class="fa-solid fa-envelope" style="font-size:0.7rem"></i> ${d.vendor.email}</div>` : ''}
+        ${d.vendor.phone ? `<div class="inv-party-detail"><i class="fa-solid fa-phone" style="font-size:0.7rem"></i> ${d.vendor.phone}</div>` : ''}
+      </div>`;
+    }
+    if (d.client) {
+      html += `<div class="inv-party-card">
+        <div class="inv-party-label">Client / Buyer</div>
+        <div class="inv-party-name">${d.client.name || ''}</div>
+        ${d.client.address ? `<div class="inv-party-detail">${d.client.address}</div>` : ''}
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (d.line_items && d.line_items.length) {
+    html += `<div class="inv-section"><div class="inv-section-title">Line Items</div>
+    <table class="inv-table">
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+      <tbody>`;
+    d.line_items.forEach(item => {
+      html += `<tr>
+        <td>${item.description || ''}</td>
+        <td>${item.quantity || '—'}</td>
+        <td>${item.unit_price || '—'}</td>
+        <td>${item.total || '—'}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  if (d.notes) {
+    html += `<div class="inv-section"><div class="inv-section-title">Notes</div><p style="font-size:0.875rem;color:var(--text-secondary)">${d.notes}</p></div>`;
+  }
+
+  resultBox.innerHTML = html;
+  resultBox.style.display = 'block';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,170 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Summarize PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/preview.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1><i class="fa-solid fa-file-lines"></i> Summarize PDF</h1>
+            <p>Get the key points from long PDF documents using AI-powered extractive summarization.</p>
+        </div>
+
+        <form id="uploadForm" action="/summarize-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-file-lines"></i>
+                </div>
+                <h3>Select PDF</h3>
+                <p>or drop file here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select File
+                </button>
+            </div>
+
+            <div id="fileDisplay" style="display: none; margin-top: 1.5rem;">
+                <div class="file-item" id="selectedFile"></div>
+
+                <div class="action-panel" id="optionsPanel" style="display: block; margin-top: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="summaryLength">Summary Length</label>
+                            <select name="count" id="summaryLength" class="form-control form-select">
+                                <option value="3">Short — ~3 sentences</option>
+                                <option value="5" selected>Medium — ~5 sentences</option>
+                                <option value="10">Long — ~10 sentences</option>
+                                <option value="20">Detailed — ~20 sentences</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-panel" id="actionPanel">
+                <button type="submit" class="btn btn-primary btn-lg" id="convertBtn">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    Summarize Now
+                </button>
+            </div>
+        </form>
+
+        <div id="loading" class="preview-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Reading PDF and generating summary…</p>
+        </div>
+
+        <div id="resultSection" style="display: none; margin-top: 2rem;">
+            <div class="action-panel show" style="display: block;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <i class="fa-solid fa-align-left" style="color: #818cf8;"></i> Generated Summary
+                    </h3>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-outline btn-sm" onclick="copyText()">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="downloadText()">
+                            <i class="fa-solid fa-download"></i> Download .txt
+                        </button>
+                    </div>
+                </div>
+                <textarea id="resultText" class="form-control" style="min-height: 360px; font-size: 0.95rem; line-height: 1.7; color: var(--text-primary); background: var(--surface);" readonly></textarea>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone    = document.getElementById('dropZone');
+    const fileInput   = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const optionsPanel = document.getElementById('optionsPanel');
+    const fileDisplay = document.getElementById('fileDisplay');
+    const selectedFile = document.getElementById('selectedFile');
+    const form        = document.getElementById('uploadForm');
+    const loading     = document.getElementById('loading');
+    const resultSection = document.getElementById('resultSection');
+    const resultText  = document.getElementById('resultText');
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); }
+    });
+    fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+    function handleFile(file) {
+        if (!file.name.toLowerCase().endsWith('.pdf')) { alert('Please select a PDF file.'); return; }
+        selectedFile.innerHTML = `
+            <div class="file-item-info">
+                <div class="file-item-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                <div class="file-item-details">
+                    <h4>${file.name}</h4>
+                    <p>${(file.size / 1024 / 1024).toFixed(2)} MB &bull; Ready to summarize</p>
+                </div>
+            </div>
+            <div style="color: var(--success); font-size: 1.2rem;"><i class="fa-solid fa-check-circle"></i></div>
+        `;
+        fileDisplay.style.display = 'block';
+        actionPanel.style.display = 'block';
+        actionPanel.classList.add('show');
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!fileInput.files.length) return;
+
+        loading.style.display = 'flex';
+        actionPanel.style.display = 'none';
+        resultSection.style.display = 'none';
+
+        try {
+            const response = await fetch('/summarize-pdf', { method: 'POST', body: new FormData(form) });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.summary) {
+                    resultText.value = data.summary;
+                    resultSection.style.display = 'block';
+                    resultSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                    actionPanel.style.display = 'block';
+                    actionPanel.classList.add('show');
+                }
+            } else {
+                alert('Error processing file: ' + await response.text());
+                actionPanel.style.display = 'block';
+                actionPanel.classList.add('show');
+            }
+        } catch (err) {
+            alert('An error occurred while generating summary.');
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        } finally {
+            loading.style.display = 'none';
+        }
+    });
+
+    function copyText() {
+        resultText.select();
+        document.execCommand('copy');
+    }
+
+    function downloadText() {
+        const blob = new Blob([resultText.value], { type: 'text/plain' });
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'pdf_summary.txt' });
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+</script>
+{% endblock %}

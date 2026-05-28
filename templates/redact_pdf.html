@@ -1,0 +1,143 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Redact PDF - Document Utility Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/preview.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>Redact PDF</h1>
+            <p>Permanently remove sensitive information from your PDF documents.</p>
+        </div>
+
+        <form id="redactForm" action="/redact-pdf" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".pdf" style="display: none;">
+                <div class="upload-icon">
+                    <i class="fa-solid fa-user-secret"></i>
+                </div>
+                <h3>Select PDF file</h3>
+                <p>or drop PDF here</p>
+                <button type="button" class="btn btn-primary btn-lg"
+                    onclick="document.getElementById('fileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Select PDF
+                </button>
+            </div>
+
+            <div id="fileDisplay" style="display: none; margin-top: 2rem;">
+                <div class="file-item" id="selectedFile">
+                    <!-- File info inserted here -->
+                </div>
+            </div>
+
+            <div id="optionsPanel" style="display: none; margin-top: 2rem;">
+                <div class="tool-options"
+                    style="background: var(--surface); padding: 2rem; border-radius: 1rem; border: 1px solid var(--border); max-width: 600px; margin: 0 auto;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label"
+                            style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-secondary);">Text to
+                            Redact</label>
+                        <input type="text" name="text" class="form-input"
+                            placeholder="e.g. Confidential, SSN, specific name..." required
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-strong); border-radius: 0.5rem; font-size: 1rem; background: var(--surface); color: var(--text-primary);">
+                        <small class="text-muted" style="display: block; margin-top: 0.5rem; color: var(--text-tertiary);">This text
+                            will be completely blacked out everywhere it appears in the document.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-panel" id="actionPanel">
+                <button type="submit" class="btn btn-primary btn-lg" id="redactBtn">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    Redact PDF
+                </button>
+            </div>
+        </form>
+
+        <div id="loading" class="preview-loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Processing document... Please wait.</p>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const actionPanel = document.getElementById('actionPanel');
+    const optionsPanel = document.getElementById('optionsPanel');
+    const fileDisplay = document.getElementById('fileDisplay');
+    const selectedFile = document.getElementById('selectedFile');
+    const form = document.getElementById('redactForm');
+    const loading = document.getElementById('loading');
+    const redactBtn = document.getElementById('redactBtn');
+
+    // Drag and Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (file.type === 'application/pdf') {
+            selectedFile.innerHTML = `
+                <div class="file-item-info">
+                    <div class="file-item-icon">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="file-item-details">
+                        <h4>${file.name}</h4>
+                        <p>${(file.size / 1024 / 1024).toFixed(2)} MB • Ready to redact</p>
+                    </div>
+                </div>
+                <div style="color: var(--success); font-size: 1.2rem;">
+                    <i class="fa-solid fa-check-circle"></i>
+                </div>
+            `;
+            fileDisplay.style.display = 'block';
+            optionsPanel.style.display = 'block';
+            actionPanel.style.display = 'block';
+            actionPanel.classList.add('show');
+        } else {
+            alert('Please select a PDF file.');
+        }
+    }
+
+    form.addEventListener('submit', function () {
+        if (fileInput.files.length) {
+            loading.style.display = 'block';
+            actionPanel.style.display = 'none';
+            optionsPanel.style.display = 'none';
+            fileDisplay.style.display = 'none';
+            dropZone.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

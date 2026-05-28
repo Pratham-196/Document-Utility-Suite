@@ -1,0 +1,106 @@
+﻿{% extends 'base.html' %}
+{% block title %}Image to Base64 — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-code"></i></div>
+    <h1>Image to Base64</h1>
+    <p>Convert any image to a Base64 string or data URI — instantly, in your browser.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
+      <p>Drop an image here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">Processed entirely in your browser — never uploaded</span>
+    </div>
+
+    <div id="resultArea" style="display:none;margin-top:24px">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="tab-btn active" data-tab="datauri">Data URI</button>
+        <button class="tab-btn" data-tab="raw">Raw Base64</button>
+      </div>
+
+      <div style="position:relative">
+        <textarea id="outputBox" readonly
+          style="width:100%;height:160px;resize:vertical;font-family:monospace;font-size:0.75rem;
+                 background:var(--surface-hover);border:1px solid var(--border);border-radius:10px;
+                 padding:12px;color:var(--text-primary);line-height:1.5;box-sizing:border-box"></textarea>
+        <button id="copyBtn" onclick="copyOutput()"
+          style="position:absolute;top:10px;right:10px;background:#6366f1;color:white;border:none;
+                 border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer">
+          <i class="fa-solid fa-copy"></i> Copy
+        </button>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span id="sizeInfo" style="font-size:0.78rem;color:var(--text-tertiary)"></span>
+        <span id="copyFeedback" style="font-size:0.78rem;color:#34d399;display:none">
+          <i class="fa-solid fa-check"></i> Copied!
+        </span>
+      </div>
+
+      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+        <p style="font-size:0.8rem;color:var(--text-tertiary);margin-bottom:10px">Preview</p>
+        <img id="imgPreview" style="max-width:100%;max-height:200px;border-radius:10px;border:1px solid var(--border)">
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+const outputBox = document.getElementById('outputBox');
+const resultArea = document.getElementById('resultArea');
+const sizeInfo  = document.getElementById('sizeInfo');
+const imgPreview = document.getElementById('imgPreview');
+
+let rawBase64 = '';
+let mimeType  = '';
+
+function handleFile(file) {
+  if (!file) return;
+  mimeType = file.type || 'image/png';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUri = e.target.result;
+    rawBase64 = dataUri.split(',')[1];
+    imgPreview.src = dataUri;
+    outputBox.value = dataUri;
+    sizeInfo.textContent = `Size: ${(rawBase64.length * 0.75 / 1024).toFixed(1)} KB original · ${(rawBase64.length / 1024).toFixed(1)} KB base64`;
+    resultArea.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    outputBox.value = btn.dataset.tab === 'raw' ? rawBase64 : `data:${mimeType};base64,${rawBase64}`;
+  });
+});
+
+function copyOutput() {
+  navigator.clipboard.writeText(outputBox.value).then(() => {
+    const fb = document.getElementById('copyFeedback');
+    fb.style.display = 'inline';
+    setTimeout(() => fb.style.display = 'none', 2000);
+  });
+}
+
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; handleFile(f); }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,164 @@
+﻿{% extends 'base.html' %}
+{% block title %}AI OCR Correction — Document Utility Suite{% endblock %}
+{% block extra_css %}
+<style>
+{% raw %}@media(max-width:700px){#editorGrid{grid-template-columns:1fr!important}}{% endraw %}
+</style>
+{% endblock %}
+{% block content %}
+<div class="tool-page" style="max-width:1000px">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-spell-check"></i></div>
+    <h1>AI OCR Correction</h1>
+    <p>Fix garbled OCR output from scanned documents. AI corrects l→1, 0→O, broken words, and scanning artifacts while preserving all content.</p>
+  </div>
+
+  <div class="tool-card">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="editorGrid">
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="form-label" style="margin:0">Raw OCR Text</label>
+          <label style="font-size:0.75rem;color:#818cf8;cursor:pointer;display:flex;align-items:center;gap:5px">
+            <i class="fa-solid fa-upload"></i>
+            <input type="file" id="fileUpload" accept=".pdf,image/*" style="display:none">
+            Run OCR + Fix
+          </label>
+        </div>
+        <textarea id="inputText" class="form-control" style="height:340px;resize:vertical;font-size:0.82rem;font-family:monospace;color:var(--text-primary)"
+          placeholder="Paste raw OCR text here (the messy output from a scanner)…&#10;&#10;Example:&#10;Th1s 1s an examp1e 0f 0CR err0rs&#10;that need t0 be f1xed by A1."></textarea>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+          <span id="charCount" style="font-size:0.72rem;color:var(--text-disabled)">0 characters</span>
+          <button id="correctBtn" class="btn btn-primary" style="padding:8px 20px">
+            <i class="fa-solid fa-spell-check"></i> Correct with AI
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="form-label" style="margin:0">Corrected Text</label>
+          <div style="display:flex;gap:6px">
+            <button id="copyBtn" class="btn btn-outline btn-sm" style="display:none" onclick="copyResult()">
+              <i class="fa-solid fa-copy"></i> Copy
+            </button>
+            <button id="downloadBtn" class="btn btn-outline btn-sm" style="display:none" onclick="downloadResult()">
+              <i class="fa-solid fa-download"></i> .txt
+            </button>
+          </div>
+        </div>
+        <div id="outputArea" style="height:340px;overflow-y:auto;background:var(--surface-hover);
+          border:1.5px solid var(--border-strong);border-radius:var(--radius-lg);padding:14px;
+          font-size:0.82rem;font-family:monospace;color:var(--text-primary);line-height:1.7;white-space:pre-wrap">
+          <span style="color:var(--text-tertiary)">Corrected text will appear here…</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="loadingBar" style="display:none;margin-top:16px;text-align:center;color:var(--text-tertiary);font-size:0.85rem">
+      <i class="fa-solid fa-spinner fa-spin"></i> AI is correcting OCR errors… this may take 10–20 seconds
+    </div>
+  </div>
+</div>
+
+<script>
+const inputText  = document.getElementById('inputText');
+const outputArea = document.getElementById('outputArea');
+const correctBtn = document.getElementById('correctBtn');
+let resultText   = '';
+
+inputText.addEventListener('input', () => {
+  document.getElementById('charCount').textContent = inputText.value.length.toLocaleString() + ' characters';
+});
+
+document.getElementById('fileUpload').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  correctBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running OCR…';
+  correctBtn.disabled = true;
+  document.getElementById('loadingBar').style.display = 'block';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fetch('/ocr-correct', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(data => {
+      correctBtn.innerHTML = '<i class="fa-solid fa-spell-check"></i> Correct with AI';
+      correctBtn.disabled = false;
+      document.getElementById('loadingBar').style.display = 'none';
+      if (data.error) { alert(data.error); return; }
+      inputText.value = data.original || '';
+      inputText.dispatchEvent(new Event('input'));
+      resultText = data.corrected;
+      outputArea.textContent = resultText;
+      document.getElementById('copyBtn').style.display = '';
+      document.getElementById('downloadBtn').style.display = '';
+    })
+    .catch(() => {
+      correctBtn.innerHTML = '<i class="fa-solid fa-spell-check"></i> Correct with AI';
+      correctBtn.disabled = false;
+      document.getElementById('loadingBar').style.display = 'none';
+      alert('Failed. Please try again.');
+    });
+});
+
+correctBtn.addEventListener('click', () => {
+  const text = inputText.value.trim();
+  if (!text) { alert('Please paste some OCR text first.'); return; }
+
+  correctBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Correcting…';
+  correctBtn.disabled = true;
+  document.getElementById('loadingBar').style.display = 'block';
+  outputArea.innerHTML = '<span style="color:var(--text-disabled)">Correcting…</span>';
+
+  const fd = new FormData();
+  fd.append('raw_text', text);
+  fetch('/ocr-correct', { method: 'POST', body: fd })
+        .then(async r => {
+      if (!r.ok) {
+        let err = 'Server error';
+        try { const d = await r.json(); err = d.error || err; } catch(e) {}
+        throw new Error(err);
+      }
+      return r.json();
+    })
+    .then(data => {
+      correctBtn.innerHTML = '<i class="fa-solid fa-spell-check"></i> Correct with AI';
+      correctBtn.disabled = false;
+      document.getElementById('loadingBar').style.display = 'none';
+      if (data.error) { outputArea.innerHTML = `<span style="color:#f87171">${data.error}</span>`; return; }
+      resultText = data.corrected;
+      outputArea.textContent = resultText;
+      document.getElementById('copyBtn').style.display = '';
+      document.getElementById('downloadBtn').style.display = '';
+    })
+    .catch(() => {
+      correctBtn.innerHTML = '<i class="fa-solid fa-spell-check"></i> Correct with AI';
+      correctBtn.disabled = false;
+      document.getElementById('loadingBar').style.display = 'none';
+      outputArea.innerHTML = '<span style="color:#f87171">Request failed. Please try again.</span>';
+    });
+});
+
+function copyResult() {
+  navigator.clipboard.writeText(resultText).then(() => {
+    document.getElementById('copyBtn').innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+    setTimeout(() => { document.getElementById('copyBtn').innerHTML = '<i class="fa-solid fa-copy"></i> Copy'; }, 2000);
+  });
+}
+
+function downloadResult() {
+  const blob = new Blob([resultText], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'corrected_ocr.txt';
+  a.click();
+}
+</script>
+{% endblock %}

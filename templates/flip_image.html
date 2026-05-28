@@ -1,0 +1,70 @@
+﻿{% extends 'base.html' %}
+{% block title %}Flip / Mirror Image — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-left-right"></i></div>
+    <h1>Flip / Mirror Image</h1>
+    <p>Flip your image horizontally (mirror) or vertically. Instant download, no quality loss.</p>
+  </div>
+
+  <div class="tool-card">
+    <form id="flipForm" method="POST" enctype="multipart/form-data" action="/flip-image">
+      <div class="upload-area" id="dropZone">
+        <input type="file" name="file" id="fileInput" accept="image/*" required style="display:none">
+        <div class="upload-icon"><i class="fa-solid fa-image"></i></div>
+        <p>Drop an image here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+        <span class="upload-hint">JPG, PNG, WEBP, BMP supported</span>
+        <div id="previewWrap" style="display:none;margin-top:16px">
+          <img id="imgPreview" style="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--border)">
+          <p id="fileName" style="font-size:0.8rem;color:var(--text-tertiary);margin-top:8px"></p>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:24px">
+        <label class="form-label">Flip Direction</label>
+        <div class="filter-grid" style="grid-template-columns:repeat(2,1fr);max-width:360px">
+          <label class="filter-opt">
+            <input type="radio" name="direction" value="flip_h" checked>
+            <span><i class="fa-solid fa-left-right"></i> Horizontal (Mirror)</span>
+          </label>
+          <label class="filter-opt">
+            <input type="radio" name="direction" value="flip_v">
+            <span><i class="fa-solid fa-up-down"></i> Vertical (Upside Down)</span>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:24px">
+        <i class="fa-solid fa-left-right"></i> Flip & Download
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+const preview   = document.getElementById('imgPreview');
+const previewWrap = document.getElementById('previewWrap');
+const fileName  = document.getElementById('fileName');
+
+function showPreview(file) {
+  if (!file) return;
+  fileName.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; previewWrap.style.display = 'block'; };
+  reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; showPreview(f); }
+});
+</script>
+{% endblock %}

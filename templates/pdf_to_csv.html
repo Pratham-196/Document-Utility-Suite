@@ -1,0 +1,35 @@
+﻿{% extends 'base.html' %}
+{% block title %}PDF Table Extractor — Document Utility Suite{% endblock %}
+{% block content %}
+<section class="section"><div class="container">
+<div class="tool-header">
+  <h1><i class="fa-solid fa-table"></i> PDF Table Extractor</h1>
+  <p>Detect and extract all tables from a PDF into CSV files. Each table becomes its own CSV, bundled in a ZIP if multiple are found.</p>
+</div>
+<form action="/pdf-to-csv" method="post" enctype="multipart/form-data">
+  <div class="upload-area" id="dropZone">
+    <input type="file" name="file" id="fileInput" accept=".pdf" style="display:none">
+    <div class="upload-icon"><i class="fa-solid fa-file-pdf"></i></div>
+    <h3>Select PDF file</h3><p>or drop PDF here</p>
+    <button type="button" class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
+      <i class="fa-solid fa-folder-open"></i> Choose PDF
+    </button>
+  </div>
+  <div id="fileDisplay" style="display:none;margin-top:1.5rem"><div class="file-item" id="selectedFile"></div></div>
+  <div class="action-panel" id="actionPanel">
+    <p style="font-size:0.82rem;color:var(--text-tertiary);margin-bottom:20px;">
+      <i class="fa-solid fa-circle-info"></i> Works best on PDFs with real table structures. Scanned PDFs require OCR first.
+    </p>
+    <button type="submit" class="btn btn-primary btn-lg"><i class="fa-solid fa-table"></i> Extract Tables to CSV</button>
+  </div>
+</form>
+</div></section>
+{% endblock %}
+{% block scripts %}<script>
+const fi=document.getElementById('fileInput'),dz=document.getElementById('dropZone'),ap=document.getElementById('actionPanel'),fd=document.getElementById('fileDisplay'),sf=document.getElementById('selectedFile');
+function showFile(f){sf.innerHTML=`<div class="file-item-info"><div class="file-item-icon"><i class="fa-solid fa-file-pdf"></i></div><div class="file-item-details"><h4>${f.name}</h4><p>${(f.size/1024).toFixed(1)} KB</p></div></div>`;fd.style.display='block';ap.classList.add('show');}
+fi.addEventListener('change',()=>{if(fi.files[0])showFile(fi.files[0]);});
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);fi.files=dt.files;showFile(f);}});
+</script>{% endblock %}

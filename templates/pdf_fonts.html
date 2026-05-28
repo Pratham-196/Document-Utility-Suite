@@ -1,0 +1,82 @@
+﻿{% extends 'base.html' %}
+{% block title %}PDF Font Inspector — Document Utility Suite{% endblock %}
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div class="tool-icon-lg"><i class="fa-solid fa-font"></i></div>
+    <h1>PDF Font Inspector</h1>
+    <p>List all fonts embedded in a PDF — name, type, and which pages use them. Essential for print and design workflows.</p>
+  </div>
+
+  <div class="tool-card">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf" style="display:none">
+      <div class="upload-icon"><i class="fa-solid fa-font"></i></div>
+      <p>Drop a PDF here or <button type="button" class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+      <span class="upload-hint">PDF files only</span>
+    </div>
+
+    <div id="loadingState" style="display:none;margin-top:20px;text-align:center;color:var(--text-tertiary)">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:8px;display:block"></i>
+      Inspecting fonts…
+    </div>
+
+    <div id="results" style="display:none;margin-top:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span id="fontCount" style="font-size:0.85rem;color:var(--text-tertiary)"></span>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table" id="fontTable">
+          <thead><tr><th>Font Name</th><th>Type</th><th>Pages</th></tr></thead>
+          <tbody id="fontBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="noFonts" style="display:none;text-align:center;padding:32px;color:var(--text-tertiary)">
+      <i class="fa-solid fa-circle-info" style="font-size:2rem;margin-bottom:12px;display:block"></i>
+      No font data found. The PDF may use only system fonts or be image-based.
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+const fi = document.getElementById('fileInput');
+const dz = document.getElementById('dropZone');
+
+async function inspect(file) {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('noFonts').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'block';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch('/pdf-fonts', { method: 'POST', body: fd });
+  const data = await res.json();
+
+  document.getElementById('loadingState').style.display = 'none';
+
+  if (data.error) { alert('Error: ' + data.error); return; }
+  if (!data.fonts || data.fonts.length === 0) {
+    document.getElementById('noFonts').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('fontCount').textContent = `${data.fonts.length} font${data.fonts.length !== 1 ? 's' : ''} found`;
+  document.getElementById('fontBody').innerHTML = data.fonts.map(f => `<tr>
+    <td class="key-col">${f.name}</td>
+    <td><span class="type-badge">${f.type || 'Unknown'}</span></td>
+    <td style="font-size:0.75rem;color:var(--text-tertiary)">p. ${f.pages.slice(0, 8).join(', ')}${f.pages.length > 8 ? ' …' : ''}</td>
+  </tr>`).join('');
+  document.getElementById('results').style.display = 'block';
+}
+
+fi.addEventListener('change', () => { if (fi.files[0]) inspect(fi.files[0]); });
+dz.addEventListener('click', e => { if (!e.target.closest('button')) fi.click(); });
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) inspect(e.dataTransfer.files[0]);
+});
+</script>{% endblock %}

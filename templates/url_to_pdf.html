@@ -1,0 +1,148 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}URL to PDF - Document Utility Suite{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="container">
+        <div class="tool-header">
+            <h1>URL to PDF</h1>
+            <p>Convert any website URL into a high-quality PDF document.</p>
+        </div>
+
+        <div class="tool-container">
+            <form action="/url-to-pdf" method="post" id="urlForm">
+                <div class="input-card">
+                    <div class="input-group">
+                        <label for="url"><i class="fa-solid fa-link"></i> Website URL</label>
+                        <input type="url" name="url" id="url" placeholder="https://example.com" required>
+                    </div>
+
+                    <div class="options-grid">
+                        <div class="option-item">
+                            <label><i class="fa-solid fa-file-lines"></i> Page Size</label>
+                            <select name="page_size">
+                                <option value="A4">A4</option>
+                                <option value="Letter">Letter</option>
+                                <option value="Legal">Legal</option>
+                            </select>
+                        </div>
+                        <div class="option-item">
+                            <label><i class="fa-solid fa-arrows-left-right"></i> Orientation</label>
+                            <select name="orientation">
+                                <option value="Portrait">Portrait</option>
+                                <option value="Landscape">Landscape</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        Convert to PDF
+                    </button>
+                </div>
+            </form>
+
+            <div id="loadingState" style="display: none; text-align: center; margin-top: 2rem;">
+                <div class="loader"></div>
+                <p>Generating your PDF... This may take a few seconds.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .tool-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .input-card {
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border);
+    }
+
+    .input-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .input-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .input-group input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border);
+        border-radius: var(--radius-md);
+        font-family: inherit;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+        color: var(--text-primary);
+        background: var(--surface);
+    }
+
+    .input-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .option-item label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .option-item select {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        background: var(--surface);
+    }
+
+    .btn-block { width: 100%; }
+
+    .loader {
+        border: 4px solid var(--border-strong);
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<script>
+    document.getElementById('urlForm').addEventListener('submit', function () {
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('loadingState').style.display = 'block';
+    });
+</script>
+{% endblock %}
