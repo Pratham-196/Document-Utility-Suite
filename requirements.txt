@@ -1,0 +1,59 @@
+﻿# ============================================================
+#  Document Utility Suite — Python Dependencies
+#  Install everything with one command:
+#
+#      pip install -r requirements.txt
+#
+#  Python 3.8+ required.
+# ============================================================
+
+
+# ── Web Framework ────────────────────────────────────────────
+Flask
+Werkzeug
+python-dotenv
+
+
+# ── PDF Processing ───────────────────────────────────────────
+pymupdf
+pypdf
+reportlab
+pdf2docx
+docx2pdf
+python-docx
+python-pptx
+pdfplumber
+
+
+# ── Image Processing ─────────────────────────────────────────
+Pillow
+numpy
+rembg
+opencv-python
+
+
+# ── OCR ──────────────────────────────────────────────────────
+pytesseract
+
+
+# ── AI / Gemini (uses REST via requests — no extra SDK) ──────
+requests
+
+
+# ── Document / Data Extraction ───────────────────────────────
+openpyxl
+pandas
+markdown
+
+
+# ── QR Code ──────────────────────────────────────────────────
+qrcode[pil]
+
+
+# ── Summarization (runs fully offline, no API key needed) ────
+sumy
+nltk
+
+
+# ── Translation (uses Google Translate, no API key needed) ───
+deep-translator
